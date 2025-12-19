@@ -1,0 +1,233 @@
+@page "/backoffice/proyectos/new"
+@page "/backoffice/proyectos/{Id:guid}/edit"
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@using JSCHUB.Domain.Enums
+@rendermode InteractiveServer
+
+<PageTitle>@(_isNew ? "Nuevo proyecto" : "Editar proyecto") - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+        <MudText Typo="Typo.h4">@(_isNew ? "Nuevo proyecto" : "Editar proyecto")</MudText>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Secondary"
+                   StartIcon="@Icons.Material.Filled.ArrowBack"
+                   Href="/backoffice/proyectos">
+            Volver
+        </MudButton>
+    </MudStack>
+
+    @if (_loading)
+    {
+        <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+    }
+    else if (_notFound)
+    {
+        <MudAlert Severity="Severity.Error">
+            No se encontró el proyecto solicitado.
+            <MudLink Href="/backoffice/proyectos" Class="ml-2">Volver al listado</MudLink>
+        </MudAlert>
+    }
+    else
+    {
+        <MudPaper Class="pa-6" Elevation="1">
+            <MudForm @ref="_form" @bind-IsValid="_isValid">
+                <MudGrid>
+                    <MudItem xs="12">
+                        <MudTextField T="string"
+                                      @bind-Value="_nombre"
+                                      Label="Nombre *"
+                                      Required="true"
+                                      RequiredError="El nombre es obligatorio"
+                                      MaxLength="200"
+                                      Counter="200"
+                                      Immediate="true" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudTextField T="string"
+                                      @bind-Value="_descripcion"
+                                      Label="Descripción"
+                                      Lines="3"
+                                      MaxLength="2000"
+                                      Counter="2000" />
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="EstadoProyecto"
+                                   @bind-Value="_estado"
+                                   Label="Estado"
+                                   AnchorOrigin="Origin.BottomCenter">
+                            <MudSelectItem T="EstadoProyecto" Value="@(EstadoProyecto.Activo)">Activo</MudSelectItem>
+                            <MudSelectItem T="EstadoProyecto" Value="@(EstadoProyecto.EnPausa)">En pausa</MudSelectItem>
+                            <MudSelectItem T="EstadoProyecto" Value="@(EstadoProyecto.Archivado)">Archivado</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string"
+                                      @bind-Value="_etiquetas"
+                                      Label="Etiquetas"
+                                      HelperText="Separadas por coma (ej: cliente, web, producción)"
+                                      MaxLength="500" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudTextField T="string"
+                                      @bind-Value="_enlacePrincipal"
+                                      Label="Enlace principal"
+                                      Placeholder="https://..."
+                                      HelperText="URL destacada del proyecto (repo, documentación, etc.)"
+                                      MaxLength="2000"
+                                      Validation="@(new Func<string?, string?>(ValidateUrl))" />
+                    </MudItem>
+                </MudGrid>
+
+                <MudDivider Class="my-6" />
+
+                <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Secondary"
+                               Href="/backoffice/proyectos">
+                        Cancelar
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Disabled="@(!_isValid || _saving)"
+                               OnClick="SaveAsync">
+                        @if (_saving)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        @(_isNew ? "Crear proyecto" : "Guardar cambios")
+                    </MudButton>
+                </MudStack>
+            </MudForm>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    [Inject] private IProyectoService ProyectoService { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private MudForm? _form;
+    private bool _isValid;
+    private bool _loading = true;
+    private bool _saving;
+    private bool _notFound;
+    private bool _isNew => Id == null;
+
+    // Campos del formulario
+    private string _nombre = string.Empty;
+    private string? _descripcion;
+    private EstadoProyecto _estado = EstadoProyecto.Activo;
+    private string? _enlacePrincipal;
+    private string? _etiquetas;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!_isNew)
+        {
+            await LoadProyectoAsync();
+        }
+        else
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task LoadProyectoAsync()
+    {
+        try
+        {
+            var proyecto = await ProyectoService.GetByIdAsync(Id!.Value);
+            if (proyecto == null)
+            {
+                _notFound = true;
+                return;
+            }
+
+            _nombre = proyecto.Nombre;
+            _descripcion = proyecto.Descripcion;
+            _estado = proyecto.Estado;
+            _enlacePrincipal = proyecto.EnlacePrincipal;
+            _etiquetas = proyecto.Etiquetas;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al cargar el proyecto: {ex.Message}", Severity.Error);
+            _notFound = true;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_form != null)
+        {
+            await _form.Validate();
+            if (!_isValid) return;
+        }
+
+        _saving = true;
+        try
+        {
+            if (_isNew)
+            {
+                var dto = new CreateProyectoDto(
+                    Nombre: _nombre,
+                    Descripcion: _descripcion,
+                    Estado: _estado,
+                    EnlacePrincipal: _enlacePrincipal,
+                    Etiquetas: _etiquetas);
+
+                var created = await ProyectoService.CreateAsync(dto, "usuario"); // TODO: obtener usuario actual
+                Snackbar.Add("Proyecto creado correctamente", Severity.Success);
+                NavigationManager.NavigateTo($"/backoffice/proyectos/{created.Id}");
+            }
+            else
+            {
+                var dto = new UpdateProyectoDto(
+                    Nombre: _nombre,
+                    Descripcion: _descripcion,
+                    Estado: _estado,
+                    EnlacePrincipal: _enlacePrincipal,
+                    Etiquetas: _etiquetas);
+
+                await ProyectoService.UpdateAsync(Id!.Value, dto, "usuario"); // TODO: obtener usuario actual
+                Snackbar.Add("Proyecto actualizado correctamente", Severity.Success);
+                NavigationManager.NavigateTo($"/backoffice/proyectos/{Id}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al guardar: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private static string? ValidateUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return null;
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            return "La URL no es válida";
+
+        if (uri.Scheme != "http" && uri.Scheme != "https")
+            return "La URL debe comenzar con http:// o https://";
+
+        return null;
+    }
+}

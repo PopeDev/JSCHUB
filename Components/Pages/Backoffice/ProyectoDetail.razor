@@ -1,0 +1,765 @@
+@page "/backoffice/proyectos/{Id:guid}"
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@using JSCHUB.Domain.Enums
+@rendermode InteractiveServer
+
+<PageTitle>@(_proyecto?.Nombre ?? "Proyecto") - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    @if (_loading)
+    {
+        <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+    }
+    else if (_notFound)
+    {
+        <MudAlert Severity="Severity.Error">
+            No se encontró el proyecto solicitado.
+            <MudLink Href="/backoffice/proyectos" Class="ml-2">Volver al listado</MudLink>
+        </MudAlert>
+    }
+    else if (_proyecto != null)
+    {
+        @* Cabecera del proyecto *@
+        <MudPaper Class="pa-4 mb-4" Elevation="1">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                <MudStack>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudText Typo="Typo.h4">@_proyecto.Nombre</MudText>
+                        <MudChip T="string" Size="Size.Small" Color="@GetEstadoColor(_proyecto.Estado)">
+                            @GetEstadoLabel(_proyecto.Estado)
+                        </MudChip>
+                    </MudStack>
+
+                    @if (!string.IsNullOrWhiteSpace(_proyecto.Descripcion))
+                    {
+                        <MudText Typo="Typo.body1" Class="mt-2">@_proyecto.Descripcion</MudText>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(_proyecto.Etiquetas))
+                    {
+                        <MudStack Row="true" Spacing="1" Class="mt-2">
+                            @foreach (var tag in _proyecto.Etiquetas.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                            {
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@tag.Trim()</MudChip>
+                            }
+                        </MudStack>
+                    }
+                </MudStack>
+
+                <MudStack Row="true" Spacing="2">
+                    @if (!string.IsNullOrWhiteSpace(_proyecto.EnlacePrincipal))
+                    {
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.OpenInNew"
+                                   Href="@_proyecto.EnlacePrincipal"
+                                   Target="_blank">
+                            Abrir
+                        </MudButton>
+                    }
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Warning"
+                               StartIcon="@Icons.Material.Filled.Edit"
+                               Href="@($"/backoffice/proyectos/{Id}/edit")">
+                        Editar
+                    </MudButton>
+                    @if (_proyecto.Estado == EstadoProyecto.Archivado)
+                    {
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Success"
+                                   StartIcon="@Icons.Material.Filled.Restore"
+                                   OnClick="ReactivarAsync">
+                            Reactivar
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Error"
+                                   StartIcon="@Icons.Material.Filled.Archive"
+                                   OnClick="ArchivarAsync">
+                            Archivar
+                        </MudButton>
+                    }
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Secondary"
+                               StartIcon="@Icons.Material.Filled.ArrowBack"
+                               Href="/backoffice/proyectos">
+                        Volver
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+
+            <MudDivider Class="my-4" />
+
+            <MudStack Row="true" Spacing="4">
+                <MudText Typo="Typo.caption">
+                    <strong>Creado por:</strong> @_proyecto.CreadoPor el @_proyecto.CreadoEl.ToString("dd/MM/yyyy HH:mm")
+                </MudText>
+                <MudText Typo="Typo.caption">
+                    <strong>Modificado por:</strong> @_proyecto.ModificadoPor el @_proyecto.ModificadoEl.ToString("dd/MM/yyyy HH:mm")
+                </MudText>
+            </MudStack>
+        </MudPaper>
+
+        @* Pestañas de Enlaces y Recursos *@
+        <MudTabs Elevation="1" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+            <MudTabPanel Text="Enlaces" Icon="@Icons.Material.Filled.Link" BadgeData="@_proyecto.Enlaces.Count()" BadgeColor="Color.Primary">
+                @* Sección de Enlaces *@
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+                    <MudText Typo="Typo.h6">Enlaces de interés</MudText>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="OpenEnlaceDialog"
+                               Disabled="@(_proyecto.Estado == EstadoProyecto.Archivado)">
+                        Nuevo enlace
+                    </MudButton>
+                </MudStack>
+
+                @if (_proyecto.Enlaces.Any())
+                {
+                    <MudTable Items="@_proyecto.Enlaces.OrderBy(e => e.Orden)" Hover="true" Striped="true" Elevation="0" Dense="true">
+                        <HeaderContent>
+                            <MudTh>Título</MudTh>
+                            <MudTh>Tipo</MudTh>
+                            <MudTh>Descripción</MudTh>
+                            <MudTh Style="width: 150px;">Acciones</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Título">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@GetTipoEnlaceIcon(context.Tipo)" Size="Size.Small" Color="Color.Primary" />
+                                    <MudText>@context.Titulo</MudText>
+                                </MudStack>
+                            </MudTd>
+                            <MudTd DataLabel="Tipo">
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@GetTipoEnlaceLabel(context.Tipo)</MudChip>
+                            </MudTd>
+                            <MudTd DataLabel="Descripción">@context.Descripcion</MudTd>
+                            <MudTd DataLabel="Acciones">
+                                <MudStack Row="true" Spacing="1">
+                                    <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
+                                                   Size="Size.Small"
+                                                   Color="Color.Primary"
+                                                   Href="@context.Url"
+                                                   Target="_blank"
+                                                   Title="Abrir enlace" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                   Size="Size.Small"
+                                                   Color="Color.Warning"
+                                                   OnClick="@(() => OpenEnlaceDialog(context))"
+                                                   Title="Editar" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                   Size="Size.Small"
+                                                   Color="Color.Error"
+                                                   OnClick="@(() => DeleteEnlaceAsync(context.Id))"
+                                                   Title="Eliminar" />
+                                </MudStack>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info">
+                        No hay enlaces registrados para este proyecto.
+                    </MudAlert>
+                }
+            </MudTabPanel>
+
+            <MudTabPanel Text="Recursos" Icon="@Icons.Material.Filled.FolderOpen" BadgeData="@_proyecto.Recursos.Count()" BadgeColor="Color.Primary">
+                @* Sección de Recursos *@
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+                    <MudText Typo="Typo.h6">Recursos del proyecto</MudText>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="OpenRecursoDialog"
+                               Disabled="@(_proyecto.Estado == EstadoProyecto.Archivado)">
+                        Nuevo recurso
+                    </MudButton>
+                </MudStack>
+
+                @if (_proyecto.Recursos.Any())
+                {
+                    <MudTable Items="@_proyecto.Recursos.OrderByDescending(r => r.ModificadoEl)" Hover="true" Striped="true" Elevation="0" Dense="true">
+                        <HeaderContent>
+                            <MudTh>Nombre</MudTh>
+                            <MudTh>Tipo</MudTh>
+                            <MudTh>Etiquetas</MudTh>
+                            <MudTh>Modificado</MudTh>
+                            <MudTh Style="width: 150px;">Acciones</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Nombre">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@GetTipoRecursoIcon(context.Tipo)" Size="Size.Small" Color="Color.Secondary" />
+                                    <MudText>@context.Nombre</MudText>
+                                </MudStack>
+                            </MudTd>
+                            <MudTd DataLabel="Tipo">
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@GetTipoRecursoLabel(context.Tipo)</MudChip>
+                            </MudTd>
+                            <MudTd DataLabel="Etiquetas">
+                                @if (!string.IsNullOrWhiteSpace(context.Etiquetas))
+                                {
+                                    @foreach (var tag in context.Etiquetas.Split(',', StringSplitOptions.RemoveEmptyEntries).Take(2))
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="mr-1">@tag.Trim()</MudChip>
+                                    }
+                                }
+                            </MudTd>
+                            <MudTd DataLabel="Modificado">
+                                <MudText Typo="Typo.body2">@context.ModificadoEl.ToString("dd/MM/yyyy")</MudText>
+                            </MudTd>
+                            <MudTd DataLabel="Acciones">
+                                <MudStack Row="true" Spacing="1">
+                                    @if (context.Tipo == TipoRecurso.Enlace || context.Tipo == TipoRecurso.DocumentoExterno)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
+                                                       Size="Size.Small"
+                                                       Color="Color.Primary"
+                                                       Href="@context.Url"
+                                                       Target="_blank"
+                                                       Title="Abrir enlace" />
+                                    }
+                                    else if (context.Tipo == TipoRecurso.Nota)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                                       Size="Size.Small"
+                                                       Color="Color.Info"
+                                                       OnClick="@(() => VerNotaAsync(context))"
+                                                       Title="Ver nota" />
+                                    }
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                   Size="Size.Small"
+                                                   Color="Color.Warning"
+                                                   OnClick="@(() => OpenRecursoDialog(context))"
+                                                   Title="Editar" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                   Size="Size.Small"
+                                                   Color="Color.Error"
+                                                   OnClick="@(() => DeleteRecursoAsync(context.Id))"
+                                                   Title="Eliminar" />
+                                </MudStack>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info">
+                        No hay recursos registrados para este proyecto.
+                    </MudAlert>
+                }
+            </MudTabPanel>
+        </MudTabs>
+    }
+</MudContainer>
+
+@* Dialog para Enlace *@
+<MudDialog @bind-Visible="_showEnlaceDialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(_editingEnlace == null ? "Nuevo enlace" : "Editar enlace")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_enlaceForm" @bind-IsValid="_enlaceFormValid">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField T="string" @bind-Value="_enlaceTitulo" Label="Título *" Required="true" RequiredError="El título es obligatorio" MaxLength="100" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" @bind-Value="_enlaceUrl" Label="URL *" Required="true" RequiredError="La URL es obligatoria" MaxLength="2000" Validation="@(new Func<string?, string?>(ValidateUrl))" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudSelect T="TipoEnlace" @bind-Value="_enlaceTipo" Label="Tipo">
+                        <MudSelectItem T="TipoEnlace" Value="@(TipoEnlace.Repositorio)">Repositorio</MudSelectItem>
+                        <MudSelectItem T="TipoEnlace" Value="@(TipoEnlace.Documentacion)">Documentación</MudSelectItem>
+                        <MudSelectItem T="TipoEnlace" Value="@(TipoEnlace.Panel)">Panel/Backoffice</MudSelectItem>
+                        <MudSelectItem T="TipoEnlace" Value="@(TipoEnlace.Entorno)">Entorno (Prod/Pre)</MudSelectItem>
+                        <MudSelectItem T="TipoEnlace" Value="@(TipoEnlace.Diseno)">Diseño</MudSelectItem>
+                        <MudSelectItem T="TipoEnlace" Value="@(TipoEnlace.Otro)">Otro</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" @bind-Value="_enlaceDescripcion" Label="Descripción" MaxLength="500" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="int" @bind-Value="_enlaceOrden" Label="Orden" Min="0" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseEnlaceDialog">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!_enlaceFormValid || _savingEnlace)" OnClick="SaveEnlaceAsync">
+            @if (_savingEnlace)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Guardar
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@* Dialog para Recurso *@
+<MudDialog @bind-Visible="_showRecursoDialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(_editingRecurso == null ? "Nuevo recurso" : "Editar recurso")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_recursoForm" @bind-IsValid="_recursoFormValid">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField T="string" @bind-Value="_recursoNombre" Label="Nombre *" Required="true" RequiredError="El nombre es obligatorio" MaxLength="200" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudSelect T="TipoRecurso" @bind-Value="_recursoTipo" Label="Tipo" ValueChanged="OnRecursoTipoChanged">
+                        <MudSelectItem T="TipoRecurso" Value="@(TipoRecurso.Enlace)">Enlace</MudSelectItem>
+                        <MudSelectItem T="TipoRecurso" Value="@(TipoRecurso.Nota)">Nota</MudSelectItem>
+                        <MudSelectItem T="TipoRecurso" Value="@(TipoRecurso.Referencia)">Referencia</MudSelectItem>
+                        <MudSelectItem T="TipoRecurso" Value="@(TipoRecurso.DocumentoExterno)">Documento externo</MudSelectItem>
+                        <MudSelectItem T="TipoRecurso" Value="@(TipoRecurso.Otro)">Otro</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                @if (_recursoTipo == TipoRecurso.Enlace || _recursoTipo == TipoRecurso.DocumentoExterno)
+                {
+                    <MudItem xs="12">
+                        <MudTextField T="string" @bind-Value="_recursoUrl" Label="URL *" Required="true" RequiredError="La URL es obligatoria" MaxLength="2000" Validation="@(new Func<string?, string?>(ValidateUrl))" />
+                    </MudItem>
+                }
+                @if (_recursoTipo == TipoRecurso.Nota)
+                {
+                    <MudItem xs="12">
+                        <MudTextField T="string" @bind-Value="_recursoContenido" Label="Contenido *" Lines="6" Required="true" RequiredError="El contenido es obligatorio" MaxLength="10000" />
+                    </MudItem>
+                }
+                else
+                {
+                    <MudItem xs="12">
+                        <MudTextField T="string" @bind-Value="_recursoContenido" Label="Notas adicionales" Lines="3" MaxLength="10000" />
+                    </MudItem>
+                }
+                <MudItem xs="12">
+                    <MudTextField T="string" @bind-Value="_recursoEtiquetas" Label="Etiquetas" HelperText="Separadas por coma" MaxLength="500" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseRecursoDialog">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!_recursoFormValid || _savingRecurso)" OnClick="SaveRecursoAsync">
+            @if (_savingRecurso)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Guardar
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@* Dialog para ver Nota *@
+<MudDialog @bind-Visible="_showNotaDialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@_notaTitulo</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Style="white-space: pre-wrap;">@_notaContenido</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showNotaDialog = false)">Cerrar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    [Inject] private IProyectoService ProyectoService { get; set; } = default!;
+    [Inject] private IEnlaceProyectoService EnlaceService { get; set; } = default!;
+    [Inject] private IRecursoProyectoService RecursoService { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
+
+    private bool _loading = true;
+    private bool _notFound;
+    private ProyectoDetalleDto? _proyecto;
+
+    // Dialog Enlace
+    private bool _showEnlaceDialog;
+    private MudForm? _enlaceForm;
+    private bool _enlaceFormValid;
+    private bool _savingEnlace;
+    private EnlaceProyectoDto? _editingEnlace;
+    private string _enlaceTitulo = string.Empty;
+    private string _enlaceUrl = string.Empty;
+    private string? _enlaceDescripcion;
+    private TipoEnlace _enlaceTipo = TipoEnlace.Otro;
+    private int _enlaceOrden;
+
+    // Dialog Recurso
+    private bool _showRecursoDialog;
+    private MudForm? _recursoForm;
+    private bool _recursoFormValid;
+    private bool _savingRecurso;
+    private RecursoProyectoDto? _editingRecurso;
+    private string _recursoNombre = string.Empty;
+    private TipoRecurso _recursoTipo = TipoRecurso.Nota;
+    private string? _recursoUrl;
+    private string? _recursoContenido;
+    private string? _recursoEtiquetas;
+
+    // Dialog Nota
+    private bool _showNotaDialog;
+    private string _notaTitulo = string.Empty;
+    private string _notaContenido = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProyectoAsync();
+    }
+
+    private async Task LoadProyectoAsync()
+    {
+        _loading = true;
+        try
+        {
+            _proyecto = await ProyectoService.GetDetalleAsync(Id);
+            if (_proyecto == null)
+            {
+                _notFound = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al cargar el proyecto: {ex.Message}", Severity.Error);
+            _notFound = true;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ArchivarAsync()
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Confirmar archivo",
+            "¿Está seguro de que desea archivar este proyecto?",
+            yesText: "Archivar",
+            cancelText: "Cancelar");
+
+        if (result == true)
+        {
+            try
+            {
+                await ProyectoService.ArchivarAsync(Id, "usuario");
+                Snackbar.Add("Proyecto archivado correctamente", Severity.Warning);
+                await LoadProyectoAsync();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error al archivar: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task ReactivarAsync()
+    {
+        try
+        {
+            await ProyectoService.ReactivarAsync(Id, "usuario");
+            Snackbar.Add("Proyecto reactivado correctamente", Severity.Success);
+            await LoadProyectoAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al reactivar: {ex.Message}", Severity.Error);
+        }
+    }
+
+    // ========== ENLACES ==========
+
+    private void OpenEnlaceDialog(EnlaceProyectoDto? enlace = null)
+    {
+        _editingEnlace = enlace;
+        if (enlace != null)
+        {
+            _enlaceTitulo = enlace.Titulo;
+            _enlaceUrl = enlace.Url;
+            _enlaceDescripcion = enlace.Descripcion;
+            _enlaceTipo = enlace.Tipo;
+            _enlaceOrden = enlace.Orden;
+        }
+        else
+        {
+            _enlaceTitulo = string.Empty;
+            _enlaceUrl = string.Empty;
+            _enlaceDescripcion = null;
+            _enlaceTipo = TipoEnlace.Otro;
+            _enlaceOrden = _proyecto?.Enlaces.Count() ?? 0;
+        }
+        _showEnlaceDialog = true;
+    }
+
+    private void CloseEnlaceDialog()
+    {
+        _showEnlaceDialog = false;
+        _editingEnlace = null;
+    }
+
+    private async Task SaveEnlaceAsync()
+    {
+        if (_enlaceForm != null)
+        {
+            await _enlaceForm.Validate();
+            if (!_enlaceFormValid) return;
+        }
+
+        _savingEnlace = true;
+        try
+        {
+            if (_editingEnlace == null)
+            {
+                var dto = new CreateEnlaceProyectoDto(
+                    ProyectoId: Id,
+                    Titulo: _enlaceTitulo,
+                    Url: _enlaceUrl,
+                    Descripcion: _enlaceDescripcion,
+                    Tipo: _enlaceTipo,
+                    Orden: _enlaceOrden);
+                await EnlaceService.CreateAsync(dto, "usuario");
+                Snackbar.Add("Enlace creado correctamente", Severity.Success);
+            }
+            else
+            {
+                var dto = new UpdateEnlaceProyectoDto(
+                    Titulo: _enlaceTitulo,
+                    Url: _enlaceUrl,
+                    Descripcion: _enlaceDescripcion,
+                    Tipo: _enlaceTipo,
+                    Orden: _enlaceOrden);
+                await EnlaceService.UpdateAsync(_editingEnlace.Id, dto, "usuario");
+                Snackbar.Add("Enlace actualizado correctamente", Severity.Success);
+            }
+
+            CloseEnlaceDialog();
+            await LoadProyectoAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al guardar enlace: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _savingEnlace = false;
+        }
+    }
+
+    private async Task DeleteEnlaceAsync(Guid id)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Confirmar eliminación",
+            "¿Está seguro de que desea eliminar este enlace?",
+            yesText: "Eliminar",
+            cancelText: "Cancelar");
+
+        if (result == true)
+        {
+            try
+            {
+                await EnlaceService.DeleteAsync(id);
+                Snackbar.Add("Enlace eliminado correctamente", Severity.Warning);
+                await LoadProyectoAsync();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error al eliminar: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    // ========== RECURSOS ==========
+
+    private void OpenRecursoDialog(RecursoProyectoDto? recurso = null)
+    {
+        _editingRecurso = recurso;
+        if (recurso != null)
+        {
+            _recursoNombre = recurso.Nombre;
+            _recursoTipo = recurso.Tipo;
+            _recursoUrl = recurso.Url;
+            _recursoContenido = recurso.Contenido;
+            _recursoEtiquetas = recurso.Etiquetas;
+        }
+        else
+        {
+            _recursoNombre = string.Empty;
+            _recursoTipo = TipoRecurso.Nota;
+            _recursoUrl = null;
+            _recursoContenido = null;
+            _recursoEtiquetas = null;
+        }
+        _showRecursoDialog = true;
+    }
+
+    private void CloseRecursoDialog()
+    {
+        _showRecursoDialog = false;
+        _editingRecurso = null;
+    }
+
+    private void OnRecursoTipoChanged(TipoRecurso tipo)
+    {
+        _recursoTipo = tipo;
+        StateHasChanged();
+    }
+
+    private async Task SaveRecursoAsync()
+    {
+        if (_recursoForm != null)
+        {
+            await _recursoForm.Validate();
+            if (!_recursoFormValid) return;
+        }
+
+        _savingRecurso = true;
+        try
+        {
+            if (_editingRecurso == null)
+            {
+                var dto = new CreateRecursoProyectoDto(
+                    ProyectoId: Id,
+                    Nombre: _recursoNombre,
+                    Tipo: _recursoTipo,
+                    Url: _recursoUrl,
+                    Contenido: _recursoContenido,
+                    Etiquetas: _recursoEtiquetas);
+                await RecursoService.CreateAsync(dto, "usuario");
+                Snackbar.Add("Recurso creado correctamente", Severity.Success);
+            }
+            else
+            {
+                var dto = new UpdateRecursoProyectoDto(
+                    Nombre: _recursoNombre,
+                    Tipo: _recursoTipo,
+                    Url: _recursoUrl,
+                    Contenido: _recursoContenido,
+                    Etiquetas: _recursoEtiquetas);
+                await RecursoService.UpdateAsync(_editingRecurso.Id, dto, "usuario");
+                Snackbar.Add("Recurso actualizado correctamente", Severity.Success);
+            }
+
+            CloseRecursoDialog();
+            await LoadProyectoAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al guardar recurso: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _savingRecurso = false;
+        }
+    }
+
+    private async Task DeleteRecursoAsync(Guid id)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Confirmar eliminación",
+            "¿Está seguro de que desea eliminar este recurso?",
+            yesText: "Eliminar",
+            cancelText: "Cancelar");
+
+        if (result == true)
+        {
+            try
+            {
+                await RecursoService.DeleteAsync(id);
+                Snackbar.Add("Recurso eliminado correctamente", Severity.Warning);
+                await LoadProyectoAsync();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error al eliminar: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private void VerNotaAsync(RecursoProyectoDto recurso)
+    {
+        _notaTitulo = recurso.Nombre;
+        _notaContenido = recurso.Contenido ?? string.Empty;
+        _showNotaDialog = true;
+    }
+
+    // ========== HELPERS ==========
+
+    private static string? ValidateUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return null;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return "La URL no es válida";
+        if (uri.Scheme != "http" && uri.Scheme != "https") return "La URL debe comenzar con http:// o https://";
+        return null;
+    }
+
+    private static Color GetEstadoColor(EstadoProyecto estado) => estado switch
+    {
+        EstadoProyecto.Activo => Color.Success,
+        EstadoProyecto.EnPausa => Color.Warning,
+        EstadoProyecto.Archivado => Color.Default,
+        _ => Color.Default
+    };
+
+    private static string GetEstadoLabel(EstadoProyecto estado) => estado switch
+    {
+        EstadoProyecto.Activo => "Activo",
+        EstadoProyecto.EnPausa => "En pausa",
+        EstadoProyecto.Archivado => "Archivado",
+        _ => estado.ToString()
+    };
+
+    private static string GetTipoEnlaceIcon(TipoEnlace tipo) => tipo switch
+    {
+        TipoEnlace.Repositorio => Icons.Material.Filled.Code,
+        TipoEnlace.Documentacion => Icons.Material.Filled.Description,
+        TipoEnlace.Panel => Icons.Material.Filled.Dashboard,
+        TipoEnlace.Entorno => Icons.Material.Filled.Cloud,
+        TipoEnlace.Diseno => Icons.Material.Filled.Brush,
+        _ => Icons.Material.Filled.Link
+    };
+
+    private static string GetTipoEnlaceLabel(TipoEnlace tipo) => tipo switch
+    {
+        TipoEnlace.Repositorio => "Repositorio",
+        TipoEnlace.Documentacion => "Documentación",
+        TipoEnlace.Panel => "Panel/Backoffice",
+        TipoEnlace.Entorno => "Entorno",
+        TipoEnlace.Diseno => "Diseño",
+        TipoEnlace.Otro => "Otro",
+        _ => tipo.ToString()
+    };
+
+    private static string GetTipoRecursoIcon(TipoRecurso tipo) => tipo switch
+    {
+        TipoRecurso.Enlace => Icons.Material.Filled.Link,
+        TipoRecurso.Nota => Icons.Material.Filled.StickyNote2,
+        TipoRecurso.Referencia => Icons.Material.Filled.BookmarkBorder,
+        TipoRecurso.DocumentoExterno => Icons.Material.Filled.AttachFile,
+        _ => Icons.Material.Filled.Folder
+    };
+
+    private static string GetTipoRecursoLabel(TipoRecurso tipo) => tipo switch
+    {
+        TipoRecurso.Enlace => "Enlace",
+        TipoRecurso.Nota => "Nota",
+        TipoRecurso.Referencia => "Referencia",
+        TipoRecurso.DocumentoExterno => "Documento",
+        TipoRecurso.Otro => "Otro",
+        _ => tipo.ToString()
+    };
+}
