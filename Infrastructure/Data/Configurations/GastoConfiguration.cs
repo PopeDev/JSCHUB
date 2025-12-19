@@ -38,7 +38,7 @@ public class GastoConfiguration : IEntityTypeConfiguration<Gasto>
             .HasConversion<string>()
             .HasMaxLength(30);
         
-        // Relación con Persona
+        // Relación con Usuario
         builder.HasOne(x => x.PagadoPor)
             .WithMany(x => x.Gastos)
             .HasForeignKey(x => x.PagadoPorId)

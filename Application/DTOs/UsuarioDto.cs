@@ -1,9 +1,9 @@
 namespace JSCHUB.Application.DTOs;
 
 /// <summary>
-/// DTO para lectura de Persona
+/// DTO para lectura de Usuario
 /// </summary>
-public record PersonaDto(
+public record UsuarioDto(
     Guid Id,
     string Nombre,
     string? Email,
@@ -12,18 +12,18 @@ public record PersonaDto(
 );
 
 /// <summary>
-/// DTO para creación de Persona
+/// DTO para creación de Usuario
 /// </summary>
-public record CreatePersonaDto(
+public record CreateUsuarioDto(
     string Nombre,
     string? Email,
     string? Telefono
 );
 
 /// <summary>
-/// DTO para actualización de Persona
+/// DTO para actualización de Usuario
 /// </summary>
-public record UpdatePersonaDto(
+public record UpdateUsuarioDto(
     string Nombre,
     string? Email,
     string? Telefono,

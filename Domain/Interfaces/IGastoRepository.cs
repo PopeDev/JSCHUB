@@ -9,8 +9,8 @@ namespace JSCHUB.Domain.Interfaces;
 public interface IGastoRepository
 {
     Task<Gasto?> GetByIdAsync(Guid id, CancellationToken ct = default);
-    Task<Gasto?> GetByIdWithPersonaAsync(Guid id, CancellationToken ct = default);
-    
+    Task<Gasto?> GetByIdWithUsuarioAsync(Guid id, CancellationToken ct = default);
+
     Task<IEnumerable<Gasto>> SearchAsync(
         string? searchText = null,
         Guid? pagadoPorId = null,
@@ -22,7 +22,7 @@ public interface IGastoRepository
         int skip = 0,
         int take = 50,
         CancellationToken ct = default);
-    
+
     Task<int> CountAsync(
         string? searchText = null,
         Guid? pagadoPorId = null,
@@ -32,7 +32,8 @@ public interface IGastoRepository
         decimal? importeMax = null,
         EstadoGasto? estado = null,
         CancellationToken ct = default);
-    
+
     Task<Gasto> AddAsync(Gasto gasto, CancellationToken ct = default);
     Task UpdateAsync(Gasto gasto, CancellationToken ct = default);
+    Task DeleteAsync(Gasto gasto, CancellationToken ct = default);
 }

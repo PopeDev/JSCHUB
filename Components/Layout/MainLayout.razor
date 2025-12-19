@@ -1,4 +1,4 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 @implements IDisposable
 @using JSCHUB.Application.Interfaces
 @inject ICurrentUserService CurrentUser
@@ -12,45 +12,52 @@
 
 <MudLayout>
     <MudAppBar Elevation="1" Dense="true">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" 
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
                        OnClick="@(() => _drawerOpen = !_drawerOpen)" />
-        <MudText Typo="Typo.h6" Class="ml-2">JSCHUB Backoffice</MudText>
+        <MudText Typo="Typo.h6" Class="ml-2">JSCHUB</MudText>
         <MudSpacer />
-        
+
         @if (CurrentUser.IsAuthenticated)
         {
             <MudText Typo="Typo.body2" Class="mr-3">
-                Sesión iniciada como: <strong>@CurrentUser.CurrentUserName</strong>
+                <strong>@CurrentUser.CurrentUserName</strong>
             </MudText>
             <MudButton Variant="Variant.Text" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.Logout"
                        OnClick="HandleLogout" Size="Size.Small">
-                Cerrar sesión
+                Salir
             </MudButton>
         }
-        
-        <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)" 
+
+        <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
                        Color="Color.Inherit" OnClick="@(() => _isDarkMode = !_isDarkMode)" Class="ml-2" />
     </MudAppBar>
-    
-    <MudDrawer @bind-Open="_drawerOpen" Elevation="2" Variant="DrawerVariant.Mini" 
+
+    <MudDrawer @bind-Open="_drawerOpen" Elevation="2" Variant="DrawerVariant.Mini"
                OpenMiniOnHover="true" ClipMode="DrawerClipMode.Always">
         <MudNavMenu>
-            <MudNavLink Href="/backoffice/monitor" Icon="@Icons.Material.Filled.Dashboard">
+            <MudNavLink Href="/backoffice/dashboard" Icon="@Icons.Material.Filled.Dashboard">
+                Dashboard
+            </MudNavLink>
+            <MudNavLink Href="/backoffice/monitor" Icon="@Icons.Material.Filled.Notifications">
                 Monitor
             </MudNavLink>
-            <MudNavLink Href="/backoffice/reminders" Icon="@Icons.Material.Filled.EventNote">
+            <MudDivider Class="my-2" />
+            <MudNavLink Href="/backoffice/reminders" Icon="@Icons.Material.Filled.EventRepeat">
                 Recordatorios
             </MudNavLink>
-            <MudNavLink Href="/backoffice/reminders/new" Icon="@Icons.Material.Filled.Add">
-                Nuevo
+            <MudNavLink Href="/backoffice/gastos" Icon="@Icons.Material.Filled.Receipt">
+                Gastos
+            </MudNavLink>
+            <MudNavLink Href="/backoffice/proyectos" Icon="@Icons.Material.Filled.Folder">
+                Proyectos
             </MudNavLink>
             <MudDivider Class="my-2" />
-            <MudNavLink Href="/" Icon="@Icons.Material.Filled.Home">
-                Inicio
+            <MudNavLink Href="/backoffice/usuarios" Icon="@Icons.Material.Filled.People">
+                Usuarios
             </MudNavLink>
         </MudNavMenu>
     </MudDrawer>
-    
+
     <MudMainContent>
         @Body
     </MudMainContent>
@@ -63,7 +70,6 @@
 
     protected override void OnInitialized()
     {
-        // Verificar autenticación para rutas del backoffice
         CheckAuthentication();
         Navigation.LocationChanged += OnLocationChanged;
     }
@@ -78,7 +84,7 @@
     {
         var uri = new Uri(Navigation.Uri);
         var isBackofficePath = uri.AbsolutePath.StartsWith("/backoffice", StringComparison.OrdinalIgnoreCase);
-        
+
         if (isBackofficePath && !CurrentUser.IsAuthenticated)
         {
             Navigation.NavigateTo("/login");
@@ -105,4 +111,3 @@
         Navigation.LocationChanged -= OnLocationChanged;
     }
 }
-

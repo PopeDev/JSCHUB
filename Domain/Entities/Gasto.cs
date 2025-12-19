@@ -21,7 +21,7 @@ public class Gasto
     /// <summary>Código de moneda ISO (default: EUR)</summary>
     public string Moneda { get; set; } = "EUR";
     
-    /// <summary>Id de la persona que pagó</summary>
+    /// <summary>Id del usuario que pagó</summary>
     public Guid PagadoPorId { get; set; }
     
     /// <summary>Fecha del pago</summary>
@@ -37,5 +37,5 @@ public class Gasto
     // public string? AdjuntoUrl { get; set; }
     
     // Navegación
-    public Persona PagadoPor { get; set; } = null!;
+    public Usuario PagadoPor { get; set; } = null!;
 }

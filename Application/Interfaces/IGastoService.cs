@@ -35,4 +35,5 @@ public interface IGastoService
     Task<GastoDto> CreateAsync(CreateGastoDto dto, CancellationToken ct = default);
     Task<GastoDto> UpdateAsync(Guid id, UpdateGastoDto dto, CancellationToken ct = default);
     Task AnularAsync(Guid id, CancellationToken ct = default);
+    Task DeleteAsync(Guid id, CancellationToken ct = default);
 }

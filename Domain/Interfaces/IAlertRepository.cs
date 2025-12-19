@@ -22,6 +22,7 @@ public interface IAlertRepository
     Task<int> CountOverdueAsync(CancellationToken ct = default);
     Task<int> CountDueTodayAsync(CancellationToken ct = default);
     Task<int> CountDueInDaysAsync(int days, CancellationToken ct = default);
+    Task<int> CountResolvedTodayAsync(CancellationToken ct = default);
     Task<Alert?> FindExistingAsync(Guid reminderItemId, DateTime occurrenceAt, CancellationToken ct = default);
     Task AddAsync(Alert alert, CancellationToken ct = default);
     Task UpdateAsync(Alert alert, CancellationToken ct = default);

@@ -1,0 +1,251 @@
+@page "/backoffice"
+@page "/backoffice/dashboard"
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@using JSCHUB.Domain.Enums
+@rendermode InteractiveServer
+
+<PageTitle>Dashboard - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
+        Dashboard
+    </MudText>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else
+    {
+        <!-- Resumen de Alertas -->
+        <MudText Typo="Typo.h6" Class="mb-3">Alertas</MudText>
+        <MudGrid Class="mb-4">
+            <MudItem xs="6" sm="4" md="2">
+                <MudPaper Class="pa-4 text-center" Elevation="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Size="Size.Large" />
+                    <MudText Typo="Typo.h4" Color="Color.Error">@_alertStats.Overdue</MudText>
+                    <MudText Typo="Typo.body2">Vencidas</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="2">
+                <MudPaper Class="pa-4 text-center" Elevation="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Today" Color="Color.Warning" Size="Size.Large" />
+                    <MudText Typo="Typo.h4" Color="Color.Warning">@_alertStats.DueToday</MudText>
+                    <MudText Typo="Typo.body2">Hoy</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="2">
+                <MudPaper Class="pa-4 text-center" Elevation="2">
+                    <MudIcon Icon="@Icons.Material.Filled.DateRange" Color="Color.Info" Size="Size.Large" />
+                    <MudText Typo="Typo.h4" Color="Color.Info">@_alertStats.DueNext7Days</MudText>
+                    <MudText Typo="Typo.body2">Próx. 7 días</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="2">
+                <MudPaper Class="pa-4 text-center" Elevation="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Notifications" Color="Color.Primary" Size="Size.Large" />
+                    <MudText Typo="Typo.h4" Color="Color.Primary">@_alertStats.TotalOpen</MudText>
+                    <MudText Typo="Typo.body2">Abiertas</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="2">
+                <MudPaper Class="pa-4 text-center" Elevation="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Snooze" Color="Color.Secondary" Size="Size.Large" />
+                    <MudText Typo="Typo.h4" Color="Color.Secondary">@_alertStats.Snoozed</MudText>
+                    <MudText Typo="Typo.body2">Pospuestas</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="2">
+                <MudPaper Class="pa-4 text-center" Elevation="2">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" />
+                    <MudText Typo="Typo.h4" Color="Color.Success">@_alertStats.ResolvedToday</MudText>
+                    <MudText Typo="Typo.body2">Resueltas hoy</MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Resumen de Gastos -->
+        <MudText Typo="Typo.h6" Class="mb-3">Gastos del Mes</MudText>
+        <MudGrid Class="mb-4">
+            <MudItem xs="6" sm="3">
+                <MudPaper Class="pa-4 text-center" Elevation="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Schedule" Color="Color.Info" Size="Size.Large" />
+                    <MudText Typo="Typo.h5" Color="Color.Info">@_gastosPrevisto.ToString("N2")€</MudText>
+                    <MudText Typo="Typo.body2">Previstos</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudPaper Class="pa-4 text-center" Elevation="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Payments" Color="Color.Success" Size="Size.Large" />
+                    <MudText Typo="Typo.h5" Color="Color.Success">@_gastosPagados.ToString("N2")€</MudText>
+                    <MudText Typo="Typo.body2">Pagados</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudPaper Class="pa-4 text-center" Elevation="2">
+                    <MudIcon Icon="@Icons.Material.Filled.HourglassEmpty" Color="Color.Warning" Size="Size.Large" />
+                    <MudText Typo="Typo.h5" Color="Color.Warning">@_gastosPendientes.ToString("N2")€</MudText>
+                    <MudText Typo="Typo.body2">Pendientes</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudPaper Class="pa-4 text-center" Elevation="2">
+                    <MudIcon Icon="@Icons.Material.Filled.CallReceived" Color="Color.Secondary" Size="Size.Large" />
+                    <MudText Typo="Typo.h5" Color="Color.Secondary">@_gastosDevolucion.ToString("N2")€</MudText>
+                    <MudText Typo="Typo.body2">Por devolver</MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Accesos Rápidos -->
+        <MudText Typo="Typo.h6" Class="mb-3">Accesos Rápidos</MudText>
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2" Class="cursor-pointer" @onclick="@(() => NavigateTo("/backoffice/monitor"))">
+                    <MudCardContent Class="d-flex flex-column align-center pa-4">
+                        <MudIcon Icon="@Icons.Material.Filled.Notifications" Color="Color.Error" Size="Size.Large" Class="mb-2" />
+                        <MudText Typo="Typo.h6">Monitor de Alertas</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Ver todas las alertas</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2" Class="cursor-pointer" @onclick="@(() => NavigateTo("/backoffice/reminders"))">
+                    <MudCardContent Class="d-flex flex-column align-center pa-4">
+                        <MudIcon Icon="@Icons.Material.Filled.EventRepeat" Color="Color.Primary" Size="Size.Large" Class="mb-2" />
+                        <MudText Typo="Typo.h6">Recordatorios</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Gestionar recordatorios</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2" Class="cursor-pointer" @onclick="@(() => NavigateTo("/backoffice/gastos"))">
+                    <MudCardContent Class="d-flex flex-column align-center pa-4">
+                        <MudIcon Icon="@Icons.Material.Filled.Receipt" Color="Color.Success" Size="Size.Large" Class="mb-2" />
+                        <MudText Typo="Typo.h6">Gastos</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Gestionar gastos</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="2" Class="cursor-pointer" @onclick="@(() => NavigateTo("/backoffice/proyectos"))">
+                    <MudCardContent Class="d-flex flex-column align-center pa-4">
+                        <MudIcon Icon="@Icons.Material.Filled.Folder" Color="Color.Warning" Size="Size.Large" Class="mb-2" />
+                        <MudText Typo="Typo.h6">Proyectos</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Ver proyectos</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Próximos Recordatorios -->
+        @if (_proximosRecordatorios.Any())
+        {
+            <MudText Typo="Typo.h6" Class="mt-4 mb-3">Próximos Recordatorios</MudText>
+            <MudTable Items="_proximosRecordatorios" Hover="true" Elevation="2" Dense="true">
+                <HeaderContent>
+                    <MudTh>Título</MudTh>
+                    <MudTh>Categoría</MudTh>
+                    <MudTh>Próximo vencimiento</MudTh>
+                    <MudTh>Días restantes</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        <MudLink Href="@($"/backoffice/reminders/{context.Id}")">@context.Title</MudLink>
+                    </MudTd>
+                    <MudTd>
+                        <MudChip T="string" Size="Size.Small" Color="@GetCategoryColor(context.Category)">
+                            @context.Category
+                        </MudChip>
+                    </MudTd>
+                    <MudTd>@context.NextOccurrenceAt?.ToString("dd/MM/yyyy")</MudTd>
+                    <MudTd>
+                        @{
+                            var days = context.NextOccurrenceAt.HasValue
+                                ? (context.NextOccurrenceAt.Value - DateTime.UtcNow).Days
+                                : 0;
+                            var color = days switch
+                            {
+                                < 0 => Color.Error,
+                                0 => Color.Error,
+                                <= 3 => Color.Warning,
+                                <= 7 => Color.Info,
+                                _ => Color.Default
+                            };
+                        }
+                        <MudChip T="string" Size="Size.Small" Color="@color">
+                            @(days < 0 ? $"Hace {-days} días" : days == 0 ? "Hoy" : $"{days} días")
+                        </MudChip>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    }
+</MudContainer>
+
+@code {
+    [Inject] private IAlertService AlertService { get; set; } = default!;
+    [Inject] private IGastoService GastoService { get; set; } = default!;
+    [Inject] private IReminderService ReminderService { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    private bool _loading = true;
+    private AlertStatsDto _alertStats = new(0, 0, 0, 0, 0, 0);
+    private decimal _gastosPrevisto;
+    private decimal _gastosPagados;
+    private decimal _gastosPendientes;
+    private decimal _gastosDevolucion;
+    private List<ReminderItemDto> _proximosRecordatorios = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            // Cargar estadísticas de alertas
+            _alertStats = await AlertService.GetStatsAsync();
+
+            // Cargar gastos del mes actual
+            var inicioMes = new DateOnly(DateTime.Now.Year, DateTime.Now.Month, 1);
+            var finMes = inicioMes.AddMonths(1).AddDays(-1);
+
+            var gastosPrevisto = await GastoService.SearchAsync(estado: EstadoGasto.Previsto, fechaDesde: inicioMes, fechaHasta: finMes);
+            _gastosPrevisto = gastosPrevisto.Sum(g => g.Importe);
+
+            var gastosPagados = await GastoService.SearchAsync(estado: EstadoGasto.Pagado, fechaDesde: inicioMes, fechaHasta: finMes);
+            _gastosPagados = gastosPagados.Sum(g => g.Importe);
+
+            var gastosPendientes = await GastoService.SearchAsync(estado: EstadoGasto.Pendiente, fechaDesde: inicioMes, fechaHasta: finMes);
+            _gastosPendientes = gastosPendientes.Sum(g => g.Importe);
+
+            var gastosDevolucion = await GastoService.SearchAsync(estado: EstadoGasto.PendienteDevolucion, fechaDesde: inicioMes, fechaHasta: finMes);
+            _gastosDevolucion = gastosDevolucion.Sum(g => g.Importe);
+
+            // Cargar próximos recordatorios
+            _proximosRecordatorios = (await ReminderService.SearchAsync(status: ItemStatus.Active, take: 5))
+                .Where(r => r.NextOccurrenceAt.HasValue)
+                .OrderBy(r => r.NextOccurrenceAt)
+                .ToList();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void NavigateTo(string url) => Navigation.NavigateTo(url);
+
+    private static Color GetCategoryColor(Category category) => category switch
+    {
+        Category.Renewal => Color.Error,
+        Category.Reminder => Color.Info,
+        _ => Color.Default
+    };
+}

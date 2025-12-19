@@ -20,7 +20,7 @@ public class GastoRepository : IGastoRepository
         return await _context.Gastos.FindAsync([id], ct);
     }
 
-    public async Task<Gasto?> GetByIdWithPersonaAsync(Guid id, CancellationToken ct = default)
+    public async Task<Gasto?> GetByIdWithUsuarioAsync(Guid id, CancellationToken ct = default)
     {
         return await _context.Gastos
             .Include(x => x.PagadoPor)
@@ -74,6 +74,12 @@ public class GastoRepository : IGastoRepository
     public async Task UpdateAsync(Gasto gasto, CancellationToken ct = default)
     {
         _context.Gastos.Update(gasto);
+        await _context.SaveChangesAsync(ct);
+    }
+
+    public async Task DeleteAsync(Gasto gasto, CancellationToken ct = default)
+    {
+        _context.Gastos.Remove(gasto);
         await _context.SaveChangesAsync(ct);
     }
 

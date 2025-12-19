@@ -24,7 +24,7 @@
                 <MudTextField @bind-Value="_concepto" Label="Concepto" Required="true"
                               RequiredError="El concepto es obligatorio"
                               MaxLength="200" Class="mb-3" />
-                
+
                 <MudGrid>
                     <MudItem xs="8">
                         <MudNumericField @bind-Value="_importe" Label="Importe" Required="true"
@@ -40,15 +40,15 @@
                         </MudSelect>
                     </MudItem>
                 </MudGrid>
-                
+
                 <MudSelect T="Guid" @bind-Value="_pagadoPorId" Label="Pagado por" Required="true"
                            RequiredError="Debe indicar quién pagó" Class="mb-3">
-                    @foreach (var persona in _personas)
+                    @foreach (var usuario in _usuarios)
                     {
-                        <MudSelectItem Value="@persona.Id">@persona.Nombre</MudSelectItem>
+                        <MudSelectItem Value="@usuario.Id">@usuario.Nombre</MudSelectItem>
                     }
                 </MudSelect>
-                
+
                 <MudGrid>
                     <MudItem xs="6">
                         <MudDatePicker @bind-Date="_fechaPago" Label="Fecha de pago" Required="true"
@@ -59,22 +59,21 @@
                                        RequiredError="La hora es obligatoria" Class="mb-3" />
                     </MudItem>
                 </MudGrid>
-                
+
                 <MudTextField @bind-Value="_notas" Label="Notas" Lines="3"
                               MaxLength="1000" Class="mb-3" />
-                
-                @if (!_isNew)
-                {
-                    <MudSelect T="EstadoGasto" @bind-Value="_estado" Label="Estado" Class="mb-3">
-                        <MudSelectItem Value="@EstadoGasto.Registrado">Registrado</MudSelectItem>
-                        <MudSelectItem Value="@EstadoGasto.Saldado">Saldado</MudSelectItem>
-                        <MudSelectItem Value="@EstadoGasto.PendienteDevolucion">Pendiente Devolución</MudSelectItem>
-                        <MudSelectItem Value="@EstadoGasto.Anulado">Anulado</MudSelectItem>
-                    </MudSelect>
-                }
-                
+
+                <MudSelect T="EstadoGasto" @bind-Value="_estado" Label="Estado" Class="mb-3">
+                    <MudSelectItem Value="@EstadoGasto.Previsto">Previsto</MudSelectItem>
+                    <MudSelectItem Value="@EstadoGasto.Pendiente">Pendiente</MudSelectItem>
+                    <MudSelectItem Value="@EstadoGasto.Pagado">Pagado</MudSelectItem>
+                    <MudSelectItem Value="@EstadoGasto.Saldado">Saldado</MudSelectItem>
+                    <MudSelectItem Value="@EstadoGasto.PendienteDevolucion">Pendiente Devolución</MudSelectItem>
+                    <MudSelectItem Value="@EstadoGasto.Anulado">Anulado</MudSelectItem>
+                </MudSelect>
+
                 <div class="d-flex gap-2 mt-4">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
                                OnClick="SaveAsync" Disabled="@(!_formValid || _saving)">
                         @if (_saving)
                         {
@@ -93,21 +92,21 @@
 
 @code {
     [Parameter] public Guid? Id { get; set; }
-    
+
     [Inject] private IGastoService GastoService { get; set; } = default!;
-    [Inject] private IPersonaService PersonaService { get; set; } = default!;
+    [Inject] private IUsuarioService UsuarioService { get; set; } = default!;
     [Inject] private ICurrentUserService CurrentUserService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
-    
+
     private MudForm _form = default!;
     private bool _loading = true;
     private bool _saving;
     private bool _formValid;
     private bool _isNew => !Id.HasValue;
-    
-    private List<PersonaDto> _personas = [];
-    
+
+    private List<UsuarioDto> _usuarios = [];
+
     private string _concepto = string.Empty;
     private string? _notas;
     private decimal _importe;
@@ -115,12 +114,12 @@
     private Guid _pagadoPorId;
     private DateTime? _fechaPago = DateTime.Today;
     private TimeSpan? _horaPago = DateTime.Now.TimeOfDay;
-    private EstadoGasto _estado = EstadoGasto.Registrado;
-    
+    private EstadoGasto _estado = EstadoGasto.Previsto;
+
     protected override async Task OnInitializedAsync()
     {
-        _personas = (await PersonaService.GetActivasAsync()).ToList();
-        
+        _usuarios = (await UsuarioService.GetActivosAsync()).ToList();
+
         if (!_isNew)
         {
             var gasto = await GastoService.GetByIdAsync(Id!.Value);
@@ -130,7 +129,7 @@
                 Navigation.NavigateTo("/backoffice/gastos");
                 return;
             }
-            
+
             _concepto = gasto.Concepto;
             _notas = gasto.Notas;
             _importe = gasto.Importe;
@@ -140,40 +139,40 @@
             _horaPago = gasto.HoraPago.ToTimeSpan();
             _estado = gasto.Estado;
         }
-        else if (_personas.Any())
+        else if (_usuarios.Any())
         {
-            // Pre-seleccionar la persona que coincide con el usuario logueado
+            // Pre-seleccionar el usuario que coincide con el usuario logueado
             var currentUser = CurrentUserService.CurrentUserName;
-            var personaActual = _personas.FirstOrDefault(p =>
-                string.Equals(p.Nombre, currentUser, StringComparison.OrdinalIgnoreCase));
+            var usuarioActual = _usuarios.FirstOrDefault(u =>
+                string.Equals(u.Nombre, currentUser, StringComparison.OrdinalIgnoreCase));
 
-            _pagadoPorId = personaActual?.Id ?? _personas.First().Id;
+            _pagadoPorId = usuarioActual?.Id ?? _usuarios.First().Id;
         }
-        
+
         _loading = false;
     }
-    
+
     private async Task SaveAsync()
     {
         await _form.Validate();
         if (!_formValid) return;
-        
+
         if (_importe <= 0)
         {
             Snackbar.Add("El importe debe ser mayor que 0", MudBlazor.Severity.Error);
             return;
         }
-        
+
         _saving = true;
         try
         {
             var fechaPago = DateOnly.FromDateTime(_fechaPago!.Value);
             var horaPago = TimeOnly.FromTimeSpan(_horaPago!.Value);
-            
+
             if (_isNew)
             {
                 var dto = new CreateGastoDto(
-                    _concepto, _notas, _importe, _moneda, 
+                    _concepto, _notas, _importe, _moneda,
                     _pagadoPorId, fechaPago, horaPago);
                 await GastoService.CreateAsync(dto);
                 Snackbar.Add("Gasto creado", MudBlazor.Severity.Success);
@@ -186,7 +185,7 @@
                 await GastoService.UpdateAsync(Id!.Value, dto);
                 Snackbar.Add("Gasto actualizado", MudBlazor.Severity.Success);
             }
-            
+
             Navigation.NavigateTo("/backoffice/gastos");
         }
         catch (Exception ex)
