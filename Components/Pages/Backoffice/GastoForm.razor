@@ -96,6 +96,7 @@
     
     [Inject] private IGastoService GastoService { get; set; } = default!;
     [Inject] private IPersonaService PersonaService { get; set; } = default!;
+    [Inject] private ICurrentUserService CurrentUserService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     
@@ -141,7 +142,12 @@
         }
         else if (_personas.Any())
         {
-            _pagadoPorId = _personas.First().Id;
+            // Pre-seleccionar la persona que coincide con el usuario logueado
+            var currentUser = CurrentUserService.CurrentUserName;
+            var personaActual = _personas.FirstOrDefault(p =>
+                string.Equals(p.Nombre, currentUser, StringComparison.OrdinalIgnoreCase));
+
+            _pagadoPorId = personaActual?.Id ?? _personas.First().Id;
         }
         
         _loading = false;
