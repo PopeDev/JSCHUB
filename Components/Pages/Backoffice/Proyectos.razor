@@ -1,0 +1,294 @@
+@page "/backoffice/proyectos"
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@using JSCHUB.Domain.Enums
+@rendermode InteractiveServer
+
+<PageTitle>Proyectos - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+        <MudText Typo="Typo.h4">Proyectos</MudText>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   Href="/backoffice/proyectos/new">
+            Nuevo proyecto
+        </MudButton>
+    </MudStack>
+
+    @* Filtros *@
+    <MudPaper Class="pa-4 mb-4" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="4">
+                <MudTextField T="string"
+                              @bind-Value="_searchText"
+                              Label="Buscar"
+                              Placeholder="Nombre, descripción o etiquetas..."
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              Immediate="true"
+                              DebounceInterval="300"
+                              OnDebounceIntervalElapsed="OnSearchChanged" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect T="EstadoProyecto?"
+                           @bind-Value="_estadoFiltro"
+                           Label="Estado"
+                           Clearable="true"
+                           AnchorOrigin="Origin.BottomCenter">
+                    <MudSelectItem T="EstadoProyecto?" Value="@(EstadoProyecto.Activo)">Activo</MudSelectItem>
+                    <MudSelectItem T="EstadoProyecto?" Value="@(EstadoProyecto.EnPausa)">En pausa</MudSelectItem>
+                    <MudSelectItem T="EstadoProyecto?" Value="@(EstadoProyecto.Archivado)">Archivado</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudSwitch T="bool"
+                           @bind-Value="_incluirArchivados"
+                           Label="Incluir archivados"
+                           Color="Color.Primary" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="2" Class="d-flex align-end">
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Secondary"
+                           OnClick="LimpiarFiltros"
+                           FullWidth="true">
+                    Limpiar
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    @* Tabla de resultados *@
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+
+    <MudTable Items="@_proyectos"
+              Hover="true"
+              Striped="true"
+              Elevation="1"
+              Loading="@_loading"
+              LoadingProgressColor="Color.Primary">
+        <HeaderContent>
+            <MudTh>Nombre</MudTh>
+            <MudTh>Estado</MudTh>
+            <MudTh>Etiquetas</MudTh>
+            <MudTh Style="width: 80px;">Enlace</MudTh>
+            <MudTh>Enlaces</MudTh>
+            <MudTh>Recursos</MudTh>
+            <MudTh>Modificado</MudTh>
+            <MudTh Style="width: 180px;">Acciones</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Nombre">
+                <MudLink Href="@($"/backoffice/proyectos/{context.Id}")">
+                    @context.Nombre
+                </MudLink>
+            </MudTd>
+            <MudTd DataLabel="Estado">
+                <MudChip T="string" Size="Size.Small" Color="@GetEstadoColor(context.Estado)">
+                    @GetEstadoLabel(context.Estado)
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Etiquetas">
+                @if (!string.IsNullOrWhiteSpace(context.Etiquetas))
+                {
+                    @foreach (var tag in context.Etiquetas.Split(',', StringSplitOptions.RemoveEmptyEntries).Take(3))
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="mr-1">@tag.Trim()</MudChip>
+                    }
+                }
+            </MudTd>
+            <MudTd DataLabel="Enlace">
+                @if (!string.IsNullOrWhiteSpace(context.EnlacePrincipal))
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
+                                   Size="Size.Small"
+                                   Color="Color.Primary"
+                                   Href="@context.EnlacePrincipal"
+                                   Target="_blank"
+                                   Title="Abrir enlace principal" />
+                }
+            </MudTd>
+            <MudTd DataLabel="Enlaces">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@context.TotalEnlaces</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Recursos">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@context.TotalRecursos</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Modificado">
+                <MudText Typo="Typo.body2">@context.ModificadoEl.ToString("dd/MM/yyyy HH:mm")</MudText>
+            </MudTd>
+            <MudTd DataLabel="Acciones">
+                <MudStack Row="true" Spacing="1">
+                    <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                   Size="Size.Small"
+                                   Color="Color.Info"
+                                   Href="@($"/backoffice/proyectos/{context.Id}")"
+                                   Title="Ver detalle" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                   Size="Size.Small"
+                                   Color="Color.Warning"
+                                   Href="@($"/backoffice/proyectos/{context.Id}/edit")"
+                                   Title="Editar" />
+                    @if (context.Estado == EstadoProyecto.Archivado)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Restore"
+                                       Size="Size.Small"
+                                       Color="Color.Success"
+                                       OnClick="@(() => ReactivarAsync(context.Id))"
+                                       Title="Reactivar" />
+                    }
+                    else
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Archive"
+                                       Size="Size.Small"
+                                       Color="Color.Error"
+                                       OnClick="@(() => ArchivarAsync(context.Id))"
+                                       Title="Archivar" />
+                    }
+                </MudStack>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Typo="Typo.body1" Align="Align.Center" Class="pa-4">
+                No se encontraron proyectos con los filtros actuales.
+            </MudText>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new int[] { 10, 25, 50, 100 }"
+                           RowsPerPageString="Filas por página:"
+                           InfoFormat="{first_item}-{last_item} de {all_items}" />
+        </PagerContent>
+    </MudTable>
+
+    @* Estadísticas *@
+    <MudPaper Class="pa-4 mt-4" Outlined="true">
+        <MudStack Row="true" Spacing="4">
+            <MudText Typo="Typo.body2">
+                <strong>Total:</strong> @_totalCount proyectos
+            </MudText>
+        </MudStack>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [Inject] private IProyectoService ProyectoService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
+
+    private bool _loading = true;
+    private List<ProyectoDto> _proyectos = [];
+    private int _totalCount;
+
+    // Filtros
+    private string? _searchText;
+    private EstadoProyecto? _estadoFiltro;
+    private bool _incluirArchivados;
+
+    // Paginación
+    private int _page;
+    private int _pageSize = 25;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            _proyectos = (await ProyectoService.SearchAsync(
+                searchText: _searchText,
+                estado: _estadoFiltro,
+                incluirArchivados: _incluirArchivados,
+                skip: _page * _pageSize,
+                take: _pageSize)).ToList();
+
+            _totalCount = await ProyectoService.CountAsync(
+                searchText: _searchText,
+                estado: _estadoFiltro,
+                incluirArchivados: _incluirArchivados);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al cargar proyectos: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OnSearchChanged()
+    {
+        _page = 0;
+        await LoadDataAsync();
+    }
+
+    private async Task LimpiarFiltros()
+    {
+        _searchText = null;
+        _estadoFiltro = null;
+        _incluirArchivados = false;
+        _page = 0;
+        await LoadDataAsync();
+    }
+
+    private async Task ArchivarAsync(Guid id)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Confirmar archivo",
+            "¿Está seguro de que desea archivar este proyecto?",
+            yesText: "Archivar",
+            cancelText: "Cancelar");
+
+        if (result == true)
+        {
+            try
+            {
+                await ProyectoService.ArchivarAsync(id, "usuario"); // TODO: obtener usuario actual
+                Snackbar.Add("Proyecto archivado correctamente", Severity.Warning);
+                await LoadDataAsync();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error al archivar: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task ReactivarAsync(Guid id)
+    {
+        try
+        {
+            await ProyectoService.ReactivarAsync(id, "usuario"); // TODO: obtener usuario actual
+            Snackbar.Add("Proyecto reactivado correctamente", Severity.Success);
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al reactivar: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private static Color GetEstadoColor(EstadoProyecto estado) => estado switch
+    {
+        EstadoProyecto.Activo => Color.Success,
+        EstadoProyecto.EnPausa => Color.Warning,
+        EstadoProyecto.Archivado => Color.Default,
+        _ => Color.Default
+    };
+
+    private static string GetEstadoLabel(EstadoProyecto estado) => estado switch
+    {
+        EstadoProyecto.Activo => "Activo",
+        EstadoProyecto.EnPausa => "En pausa",
+        EstadoProyecto.Archivado => "Archivado",
+        _ => estado.ToString()
+    };
+}

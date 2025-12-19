@@ -18,6 +18,11 @@ public class ReminderDbContext : DbContext
     public DbSet<Persona> Personas => Set<Persona>();
     public DbSet<Gasto> Gastos => Set<Gasto>();
 
+    // Módulo de Proyectos
+    public DbSet<Proyecto> Proyectos => Set<Proyecto>();
+    public DbSet<EnlaceProyecto> EnlacesProyecto => Set<EnlaceProyecto>();
+    public DbSet<RecursoProyecto> RecursosProyecto => Set<RecursoProyecto>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

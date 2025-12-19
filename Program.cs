@@ -24,6 +24,9 @@ builder.Services.AddScoped<IAlertRepository, AlertRepository>();
 builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 builder.Services.AddScoped<IPersonaRepository, PersonaRepository>();
 builder.Services.AddScoped<IGastoRepository, GastoRepository>();
+builder.Services.AddScoped<IProyectoRepository, ProyectoRepository>();
+builder.Services.AddScoped<IEnlaceProyectoRepository, EnlaceProyectoRepository>();
+builder.Services.AddScoped<IRecursoProyectoRepository, RecursoProyectoRepository>();
 
 // Add Services
 builder.Services.AddScoped<IReminderService, ReminderService>();
@@ -31,6 +34,9 @@ builder.Services.AddScoped<IAlertService, AlertService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IPersonaService, PersonaService>();
 builder.Services.AddScoped<IGastoService, GastoService>();
+builder.Services.AddScoped<IProyectoService, ProyectoService>();
+builder.Services.AddScoped<IEnlaceProyectoService, EnlaceProyectoService>();
+builder.Services.AddScoped<IRecursoProyectoService, RecursoProyectoService>();
 
 // Add Authentication Services (Singleton para mantener sesión global)
 builder.Services.AddSingleton<JSCHUB.Infrastructure.Services.AuthService>();
@@ -164,7 +170,149 @@ static async Task SeedDataAsync(ReminderDbContext db)
         await db.Gastos.AddRangeAsync(gastos);
         await db.SaveChangesAsync();
     }
-    
+
+    // Seed Proyectos (solo si no existen)
+    if (!await db.Proyectos.AnyAsync())
+    {
+        var proyecto = new JSCHUB.Domain.Entities.Proyecto
+        {
+            Id = Guid.NewGuid(),
+            Nombre = "Cliente X - Web corporativa",
+            Descripcion = "Desarrollo y mantenimiento de la web corporativa del Cliente X",
+            Estado = JSCHUB.Domain.Enums.EstadoProyecto.Activo,
+            EnlacePrincipal = "https://github.com/example/cliente-x-web",
+            Etiquetas = "cliente, web, producción",
+            CreadoPor = "sistema",
+            CreadoEl = now,
+            ModificadoPor = "sistema",
+            ModificadoEl = now
+        };
+        await db.Proyectos.AddAsync(proyecto);
+        await db.SaveChangesAsync();
+
+        // Seed Enlaces del proyecto
+        var enlaces = new[]
+        {
+            new JSCHUB.Domain.Entities.EnlaceProyecto
+            {
+                Id = Guid.NewGuid(),
+                ProyectoId = proyecto.Id,
+                Titulo = "Repositorio",
+                Url = "https://github.com/example/cliente-x-web",
+                Descripcion = "Repositorio principal del proyecto",
+                Tipo = JSCHUB.Domain.Enums.TipoEnlace.Repositorio,
+                Orden = 1,
+                CreadoPor = "sistema",
+                CreadoEl = now,
+                ModificadoPor = "sistema",
+                ModificadoEl = now
+            },
+            new JSCHUB.Domain.Entities.EnlaceProyecto
+            {
+                Id = Guid.NewGuid(),
+                ProyectoId = proyecto.Id,
+                Titulo = "Producción",
+                Url = "https://www.clientex.com",
+                Descripcion = "Sitio web en producción",
+                Tipo = JSCHUB.Domain.Enums.TipoEnlace.Entorno,
+                Orden = 2,
+                CreadoPor = "sistema",
+                CreadoEl = now,
+                ModificadoPor = "sistema",
+                ModificadoEl = now
+            },
+            new JSCHUB.Domain.Entities.EnlaceProyecto
+            {
+                Id = Guid.NewGuid(),
+                ProyectoId = proyecto.Id,
+                Titulo = "Preproducción",
+                Url = "https://staging.clientex.com",
+                Descripcion = "Entorno de staging",
+                Tipo = JSCHUB.Domain.Enums.TipoEnlace.Entorno,
+                Orden = 3,
+                CreadoPor = "sistema",
+                CreadoEl = now,
+                ModificadoPor = "sistema",
+                ModificadoEl = now
+            },
+            new JSCHUB.Domain.Entities.EnlaceProyecto
+            {
+                Id = Guid.NewGuid(),
+                ProyectoId = proyecto.Id,
+                Titulo = "Panel Hosting",
+                Url = "https://panel.hosting.com/clientex",
+                Descripcion = "Panel de administración del hosting",
+                Tipo = JSCHUB.Domain.Enums.TipoEnlace.Panel,
+                Orden = 4,
+                CreadoPor = "sistema",
+                CreadoEl = now,
+                ModificadoPor = "sistema",
+                ModificadoEl = now
+            },
+            new JSCHUB.Domain.Entities.EnlaceProyecto
+            {
+                Id = Guid.NewGuid(),
+                ProyectoId = proyecto.Id,
+                Titulo = "Figma",
+                Url = "https://figma.com/file/xxx",
+                Descripcion = "Diseños del proyecto",
+                Tipo = JSCHUB.Domain.Enums.TipoEnlace.Diseno,
+                Orden = 5,
+                CreadoPor = "sistema",
+                CreadoEl = now,
+                ModificadoPor = "sistema",
+                ModificadoEl = now
+            }
+        };
+        await db.EnlacesProyecto.AddRangeAsync(enlaces);
+
+        // Seed Recursos del proyecto
+        var recursos = new[]
+        {
+            new JSCHUB.Domain.Entities.RecursoProyecto
+            {
+                Id = Guid.NewGuid(),
+                ProyectoId = proyecto.Id,
+                Nombre = "Checklist despliegue",
+                Tipo = JSCHUB.Domain.Enums.TipoRecurso.Nota,
+                Contenido = "1. Ejecutar tests\n2. Build de producción\n3. Subir a staging\n4. Verificar en staging\n5. Deploy a producción\n6. Verificar en producción\n7. Notificar al cliente",
+                Etiquetas = "despliegue, producción",
+                CreadoPor = "sistema",
+                CreadoEl = now,
+                ModificadoPor = "sistema",
+                ModificadoEl = now
+            },
+            new JSCHUB.Domain.Entities.RecursoProyecto
+            {
+                Id = Guid.NewGuid(),
+                ProyectoId = proyecto.Id,
+                Nombre = "Credenciales entregadas",
+                Tipo = JSCHUB.Domain.Enums.TipoRecurso.Nota,
+                Contenido = "Al cliente se le han entregado:\n- Acceso al panel de hosting\n- Credenciales de admin del CMS\n- Acceso FTP (deshabilitado por defecto)",
+                Etiquetas = "credenciales, cliente",
+                CreadoPor = "sistema",
+                CreadoEl = now,
+                ModificadoPor = "sistema",
+                ModificadoEl = now
+            },
+            new JSCHUB.Domain.Entities.RecursoProyecto
+            {
+                Id = Guid.NewGuid(),
+                ProyectoId = proyecto.Id,
+                Nombre = "Guía DNS",
+                Tipo = JSCHUB.Domain.Enums.TipoRecurso.Enlace,
+                Url = "https://docs.example.com/dns-guide",
+                Etiquetas = "dns, documentación",
+                CreadoPor = "sistema",
+                CreadoEl = now,
+                ModificadoPor = "sistema",
+                ModificadoEl = now
+            }
+        };
+        await db.RecursosProyecto.AddRangeAsync(recursos);
+        await db.SaveChangesAsync();
+    }
+
     // Seed ReminderItems (solo si no existen)
     if (!await db.ReminderItems.AnyAsync())
     {
