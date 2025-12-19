@@ -1,0 +1,22 @@
+[command]
+description = "Crear un nuevo componente Blazor"
+usage = "/component [nombre]"
+
+[[args]]
+name = "name"
+description = "Nombre del componente (PascalCase)"
+required = true
+
+[[steps]]
+type = "prompt"
+content = """
+Crea un nuevo componente Blazor llamado {{name}}.razor en la carpeta Components/Shared/.
+Utiliza MudBlazor para la UI.
+Incluye:
+- Estructura básica con `MudPaper` o contenedor apropiado.
+- Sección `@code` con inyección de dependencias necesaria.
+- Manejo de estado básico (`_loading`, `_error`).
+- Implementación de `OnInitializedAsync`.
+
+Sigue el estilo definido en `agent/rules/frontend.md`.
+"""

@@ -1,0 +1,127 @@
+@page "/backoffice/personas"
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@rendermode InteractiveServer
+
+<PageTitle>Personas - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h4">
+            <MudIcon Icon="@Icons.Material.Filled.People" Class="mr-2" />
+            Personas
+        </MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.Add"
+                   Href="/backoffice/personas/new">
+            Nueva Persona
+        </MudButton>
+    </div>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else
+    {
+        <MudTable Items="_personas" Hover="true" Striped="true" Elevation="2">
+            <HeaderContent>
+                <MudTh>Nombre</MudTh>
+                <MudTh>Email</MudTh>
+                <MudTh>Teléfono</MudTh>
+                <MudTh>Estado</MudTh>
+                <MudTh Style="width: 150px">Acciones</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    <MudText Typo="Typo.body1" Class="font-weight-bold">@context.Nombre</MudText>
+                </MudTd>
+                <MudTd>
+                    @if (!string.IsNullOrEmpty(context.Email))
+                    {
+                        <MudLink Href="@($"mailto:{context.Email}")">@context.Email</MudLink>
+                    }
+                    else
+                    {
+                        <span class="mud-text-secondary">-</span>
+                    }
+                </MudTd>
+                <MudTd>
+                    @if (!string.IsNullOrEmpty(context.Telefono))
+                    {
+                        <MudLink Href="@($"tel:{context.Telefono}")">@context.Telefono</MudLink>
+                    }
+                    else
+                    {
+                        <span class="mud-text-secondary">-</span>
+                    }
+                </MudTd>
+                <MudTd>
+                    @if (context.Activo)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success">Activo</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default">Inactivo</MudChip>
+                    }
+                </MudTd>
+                <MudTd>
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit" 
+                                   Href="@($"/backoffice/personas/{context.Id}/edit")"
+                                   Title="Editar" />
+                    @if (context.Activo)
+                    {
+                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.PersonOff" 
+                                       Color="Color.Warning" Title="Desactivar"
+                                       OnClick="@(() => ToggleActivoAsync(context.Id))" />
+                    }
+                    else
+                    {
+                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.PersonAdd" 
+                                       Color="Color.Success" Title="Activar"
+                                       OnClick="@(() => ToggleActivoAsync(context.Id))" />
+                    }
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText Class="pa-4">No hay personas registradas.</MudText>
+            </NoRecordsContent>
+        </MudTable>
+    }
+</MudContainer>
+
+@code {
+    [Inject] private IPersonaService PersonaService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private bool _loading = true;
+    private List<PersonaDto> _personas = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            _personas = (await PersonaService.GetAllAsync()).ToList();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ToggleActivoAsync(Guid id)
+    {
+        await PersonaService.ToggleActivoAsync(id);
+        var persona = _personas.First(p => p.Id == id);
+        var estado = persona.Activo ? "desactivada" : "activada";
+        Snackbar.Add($"Persona {estado}", MudBlazor.Severity.Success);
+        await LoadDataAsync();
+    }
+}

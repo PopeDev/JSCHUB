@@ -1,0 +1,119 @@
+@page "/login"
+@using JSCHUB.Application.Interfaces
+@inject IAuthService AuthService
+@inject ICurrentUserService CurrentUser
+@inject NavigationManager Navigation
+
+<PageTitle>Iniciar sesión - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="d-flex align-center justify-center" Style="min-height: 100vh;">
+    <MudCard Elevation="4" Class="pa-4" Style="width: 100%; max-width: 400px;">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h4" Align="Align.Center">JSCHUB</MudText>
+                <MudText Typo="Typo.subtitle1" Align="Align.Center" Color="Color.Secondary">Backoffice</MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent>
+            <MudForm @ref="_form" @bind-IsValid="_formValid">
+                <MudTextField @bind-Value="_username"
+                              Label="Usuario"
+                              Variant="Variant.Outlined"
+                              Required="true"
+                              RequiredError="El usuario es requerido"
+                              Immediate="true"
+                              Class="mb-3"
+                              Disabled="@_loading"
+                              OnKeyDown="HandleKeyDown" />
+                
+                <MudTextField @bind-Value="_password"
+                              Label="Contraseña"
+                              Variant="Variant.Outlined"
+                              InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@(_showPassword ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                              OnAdornmentClick="() => _showPassword = !_showPassword"
+                              Required="true"
+                              RequiredError="La contraseña es requerida"
+                              Immediate="true"
+                              Class="mb-4"
+                              Disabled="@_loading"
+                              OnKeyDown="HandleKeyDown" />
+                
+                @if (!string.IsNullOrEmpty(_errorMessage))
+                {
+                    <MudAlert Severity="Severity.Error" Class="mb-3" Dense="true">
+                        @_errorMessage
+                    </MudAlert>
+                }
+            </MudForm>
+        </MudCardContent>
+        <MudCardActions Class="d-flex justify-center">
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Size="Size.Large"
+                       FullWidth="true"
+                       Disabled="@(!_formValid || _loading)"
+                       OnClick="HandleLogin">
+                @if (_loading)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                }
+                Iniciar sesión
+            </MudButton>
+        </MudCardActions>
+    </MudCard>
+</MudContainer>
+
+@code {
+    private MudForm _form = default!;
+    private bool _formValid;
+    private string _username = string.Empty;
+    private string _password = string.Empty;
+    private string? _errorMessage;
+    private bool _showPassword;
+    private bool _loading;
+
+    protected override void OnInitialized()
+    {
+        // Si ya está autenticado, redirigir al backoffice
+        if (CurrentUser.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/backoffice/monitor");
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && _formValid && !_loading)
+        {
+            await HandleLogin();
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        if (!_formValid || _loading) return;
+
+        _loading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var result = await AuthService.LoginAsync(_username, _password);
+
+            if (result.Success)
+            {
+                Navigation.NavigateTo("/backoffice/monitor", forceLoad: true);
+            }
+            else
+            {
+                _errorMessage = result.ErrorMessage ?? "Usuario o contraseña incorrectos";
+            }
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

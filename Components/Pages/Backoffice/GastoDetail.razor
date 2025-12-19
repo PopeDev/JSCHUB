@@ -1,0 +1,126 @@
+@page "/backoffice/gastos/{Id:guid}"
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@using JSCHUB.Domain.Enums
+@rendermode InteractiveServer
+
+<PageTitle>Detalle Gasto - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else if (_gasto == null)
+    {
+        <MudAlert Severity="MudBlazor.Severity.Error">Gasto no encontrado</MudAlert>
+    }
+    else
+    {
+        <MudPaper Class="pa-4">
+            <div class="d-flex justify-space-between align-center mb-4">
+                <MudText Typo="Typo.h5">
+                    <MudIcon Icon="@Icons.Material.Filled.Receipt" Class="mr-2" />
+                    Detalle del Gasto
+                </MudText>
+                <div class="d-flex gap-2">
+                    <MudButton Variant="Variant.Outlined" 
+                               StartIcon="@Icons.Material.Filled.Edit"
+                               Href="@($"/backoffice/gastos/{Id}/edit")">
+                        Editar
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" 
+                               StartIcon="@Icons.Material.Filled.ArrowBack"
+                               Href="/backoffice/gastos">
+                        Volver
+                    </MudButton>
+                </div>
+            </div>
+            
+            <MudDivider Class="mb-4" />
+            
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.h6" Class="mb-2">@_gasto.Concepto</MudText>
+                    <MudChip T="string" Size="Size.Medium" Color="@GetEstadoColor(_gasto.Estado)">
+                        @GetEstadoLabel(_gasto.Estado)
+                    </MudChip>
+                </MudItem>
+                
+                <MudItem xs="6" sm="4">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Importe</MudText>
+                    <MudText Typo="Typo.h4" Color="Color.Primary">
+                        @_gasto.Importe.ToString("N2") @_gasto.Moneda
+                    </MudText>
+                </MudItem>
+                
+                <MudItem xs="6" sm="4">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Pagado por</MudText>
+                    <MudText Typo="Typo.body1" Class="font-weight-bold">
+                        <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="mr-1" />
+                        @_gasto.PagadoPorNombre
+                    </MudText>
+                </MudItem>
+                
+                <MudItem xs="12" sm="4">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Fecha y hora</MudText>
+                    <MudText Typo="Typo.body1">
+                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" Class="mr-1" />
+                        @_gasto.FechaPago.ToString("dd/MM/yyyy") a las @_gasto.HoraPago.ToString("HH:mm")
+                    </MudText>
+                </MudItem>
+                
+                @if (!string.IsNullOrEmpty(_gasto.Notas))
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Notas</MudText>
+                        <MudPaper Class="pa-3 mt-1" Outlined="true">
+                            <MudText Typo="Typo.body2">@_gasto.Notas</MudText>
+                        </MudPaper>
+                    </MudItem>
+                }
+            </MudGrid>
+            
+            @* TODO: Sección de adjuntos cuando se implemente *@
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                <MudIcon Icon="@Icons.Material.Filled.AttachFile" Size="Size.Small" />
+                Adjuntos: Próximamente
+            </MudText>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    
+    [Inject] private IGastoService GastoService { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    
+    private bool _loading = true;
+    private GastoDto? _gasto;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        _gasto = await GastoService.GetByIdAsync(Id);
+        _loading = false;
+    }
+    
+    private static Color GetEstadoColor(EstadoGasto estado) => estado switch
+    {
+        EstadoGasto.Registrado => Color.Info,
+        EstadoGasto.Saldado => Color.Success,
+        EstadoGasto.Anulado => Color.Default,
+        EstadoGasto.PendienteDevolucion => Color.Warning,
+        _ => Color.Default
+    };
+
+    private static string GetEstadoLabel(EstadoGasto estado) => estado switch
+    {
+        EstadoGasto.Registrado => "Registrado",
+        EstadoGasto.Saldado => "Saldado",
+        EstadoGasto.Anulado => "Anulado",
+        EstadoGasto.PendienteDevolucion => "Pendiente Devolución",
+        _ => estado.ToString()
+    };
+}

@@ -1,0 +1,195 @@
+@page "/backoffice/gastos/new"
+@page "/backoffice/gastos/{Id:guid}/edit"
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@using JSCHUB.Domain.Enums
+@rendermode InteractiveServer
+
+<PageTitle>@(_isNew ? "Nuevo Gasto" : "Editar Gasto") - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-4">
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.h5" Class="mb-4">
+            <MudIcon Icon="@(_isNew ? Icons.Material.Filled.AddShoppingCart : Icons.Material.Filled.Edit)" Class="mr-2" />
+            @(_isNew ? "Nuevo Gasto" : "Editar Gasto")
+        </MudText>
+
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        }
+        else
+        {
+            <MudForm @ref="_form" @bind-IsValid="_formValid">
+                <MudTextField @bind-Value="_concepto" Label="Concepto" Required="true"
+                              RequiredError="El concepto es obligatorio"
+                              MaxLength="200" Class="mb-3" />
+                
+                <MudGrid>
+                    <MudItem xs="8">
+                        <MudNumericField @bind-Value="_importe" Label="Importe" Required="true"
+                                         Min="0.01m" Format="N2"
+                                         Adornment="Adornment.End" AdornmentText="@_moneda"
+                                         Class="mb-3" />
+                    </MudItem>
+                    <MudItem xs="4">
+                        <MudSelect T="string" @bind-Value="_moneda" Label="Moneda" Class="mb-3">
+                            <MudSelectItem Value="@("EUR")">EUR</MudSelectItem>
+                            <MudSelectItem Value="@("USD")">USD</MudSelectItem>
+                            <MudSelectItem Value="@("GBP")">GBP</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                </MudGrid>
+                
+                <MudSelect T="Guid" @bind-Value="_pagadoPorId" Label="Pagado por" Required="true"
+                           RequiredError="Debe indicar quién pagó" Class="mb-3">
+                    @foreach (var persona in _personas)
+                    {
+                        <MudSelectItem Value="@persona.Id">@persona.Nombre</MudSelectItem>
+                    }
+                </MudSelect>
+                
+                <MudGrid>
+                    <MudItem xs="6">
+                        <MudDatePicker @bind-Date="_fechaPago" Label="Fecha de pago" Required="true"
+                                       RequiredError="La fecha es obligatoria" Class="mb-3" />
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudTimePicker @bind-Time="_horaPago" Label="Hora de pago" Required="true"
+                                       RequiredError="La hora es obligatoria" Class="mb-3" />
+                    </MudItem>
+                </MudGrid>
+                
+                <MudTextField @bind-Value="_notas" Label="Notas" Lines="3"
+                              MaxLength="1000" Class="mb-3" />
+                
+                @if (!_isNew)
+                {
+                    <MudSelect T="EstadoGasto" @bind-Value="_estado" Label="Estado" Class="mb-3">
+                        <MudSelectItem Value="@EstadoGasto.Registrado">Registrado</MudSelectItem>
+                        <MudSelectItem Value="@EstadoGasto.Saldado">Saldado</MudSelectItem>
+                        <MudSelectItem Value="@EstadoGasto.PendienteDevolucion">Pendiente Devolución</MudSelectItem>
+                        <MudSelectItem Value="@EstadoGasto.Anulado">Anulado</MudSelectItem>
+                    </MudSelect>
+                }
+                
+                <div class="d-flex gap-2 mt-4">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                               OnClick="SaveAsync" Disabled="@(!_formValid || _saving)">
+                        @if (_saving)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        Guardar
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Href="/backoffice/gastos">
+                        Cancelar
+                    </MudButton>
+                </div>
+            </MudForm>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+    
+    [Inject] private IGastoService GastoService { get; set; } = default!;
+    [Inject] private IPersonaService PersonaService { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    
+    private MudForm _form = default!;
+    private bool _loading = true;
+    private bool _saving;
+    private bool _formValid;
+    private bool _isNew => !Id.HasValue;
+    
+    private List<PersonaDto> _personas = [];
+    
+    private string _concepto = string.Empty;
+    private string? _notas;
+    private decimal _importe;
+    private string _moneda = "EUR";
+    private Guid _pagadoPorId;
+    private DateTime? _fechaPago = DateTime.Today;
+    private TimeSpan? _horaPago = DateTime.Now.TimeOfDay;
+    private EstadoGasto _estado = EstadoGasto.Registrado;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        _personas = (await PersonaService.GetActivasAsync()).ToList();
+        
+        if (!_isNew)
+        {
+            var gasto = await GastoService.GetByIdAsync(Id!.Value);
+            if (gasto == null)
+            {
+                Snackbar.Add("Gasto no encontrado", MudBlazor.Severity.Error);
+                Navigation.NavigateTo("/backoffice/gastos");
+                return;
+            }
+            
+            _concepto = gasto.Concepto;
+            _notas = gasto.Notas;
+            _importe = gasto.Importe;
+            _moneda = gasto.Moneda;
+            _pagadoPorId = gasto.PagadoPorId;
+            _fechaPago = gasto.FechaPago.ToDateTime(TimeOnly.MinValue);
+            _horaPago = gasto.HoraPago.ToTimeSpan();
+            _estado = gasto.Estado;
+        }
+        else if (_personas.Any())
+        {
+            _pagadoPorId = _personas.First().Id;
+        }
+        
+        _loading = false;
+    }
+    
+    private async Task SaveAsync()
+    {
+        await _form.Validate();
+        if (!_formValid) return;
+        
+        if (_importe <= 0)
+        {
+            Snackbar.Add("El importe debe ser mayor que 0", MudBlazor.Severity.Error);
+            return;
+        }
+        
+        _saving = true;
+        try
+        {
+            var fechaPago = DateOnly.FromDateTime(_fechaPago!.Value);
+            var horaPago = TimeOnly.FromTimeSpan(_horaPago!.Value);
+            
+            if (_isNew)
+            {
+                var dto = new CreateGastoDto(
+                    _concepto, _notas, _importe, _moneda, 
+                    _pagadoPorId, fechaPago, horaPago);
+                await GastoService.CreateAsync(dto);
+                Snackbar.Add("Gasto creado", MudBlazor.Severity.Success);
+            }
+            else
+            {
+                var dto = new UpdateGastoDto(
+                    _concepto, _notas, _importe, _moneda,
+                    _pagadoPorId, fechaPago, horaPago, _estado);
+                await GastoService.UpdateAsync(Id!.Value, dto);
+                Snackbar.Add("Gasto actualizado", MudBlazor.Severity.Success);
+            }
+            
+            Navigation.NavigateTo("/backoffice/gastos");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", MudBlazor.Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

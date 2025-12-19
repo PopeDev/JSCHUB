@@ -1,0 +1,29 @@
+[command]
+description = "Desplegar la aplicación a producción"
+usage = "/deploy [ambiente]"
+
+[[steps]]
+type = "system"
+command = "dotnet build -c Release"
+description = "Compilando en modo Release..."
+
+[[steps]]
+type = "system"
+command = "dotnet test"
+description = "Ejecutando pruebas unitarias..."
+
+[[steps]]
+type = "prompt"
+content = """
+Genera una lista de verificación pre-despliegue basada en el estado actual del proyecto.
+Incluye:
+1. Verificación de Connection Strings
+2. Migraciones pendientes
+3. Configuración de Serilog
+4. Claves de API y secretos
+"""
+
+[[steps]]
+type = "system"
+command = "dotnet publish -c Release -o ./publish"
+description = "Publicando artefactos..."

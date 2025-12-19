@@ -1,0 +1,268 @@
+@page "/backoffice/reminders"
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@using JSCHUB.Domain.Enums
+@rendermode InteractiveServer
+
+<PageTitle>Recordatorios - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h4">
+            <MudIcon Icon="@Icons.Material.Filled.EventNote" Class="mr-2" />
+            Recordatorios y Renovaciones
+        </MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.Add"
+                   Href="/backoffice/reminders/new">
+            Nuevo
+        </MudButton>
+    </div>
+
+    <!-- Filters -->
+    <MudPaper Class="pa-3 mb-4">
+        <MudGrid>
+            <MudItem xs="12" sm="3">
+                <MudTextField @bind-Value="_searchText" Label="Buscar" 
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                              Variant="Variant.Outlined" Dense="true" 
+                              DebounceInterval="300" OnDebounceIntervalElapsed="LoadDataAsync" />
+            </MudItem>
+            <MudItem xs="6" sm="2">
+                <MudSelect T="Category?" @bind-Value="_filterCategory" Label="Categoría" Clearable="true"
+                           Variant="Variant.Outlined" Dense="true">
+                    <MudSelectItem Value="@((Category?)Category.Renewal)">Renovación</MudSelectItem>
+                    <MudSelectItem Value="@((Category?)Category.Reminder)">Recordatorio</MudSelectItem>
+                    <MudSelectItem Value="@((Category?)Category.Other)">Otro</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="6" sm="2">
+                <MudSelect T="ItemStatus?" @bind-Value="_filterStatus" Label="Estado" Clearable="true"
+                           Variant="Variant.Outlined" Dense="true">
+                    <MudSelectItem Value="@((ItemStatus?)ItemStatus.Active)">Activo</MudSelectItem>
+                    <MudSelectItem Value="@((ItemStatus?)ItemStatus.Paused)">Pausado</MudSelectItem>
+                    <MudSelectItem Value="@((ItemStatus?)ItemStatus.Archived)">Archivado</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudTextField @bind-Value="_filterTag" Label="Etiqueta" 
+                              Variant="Variant.Outlined" Dense="true" />
+            </MudItem>
+            <MudItem xs="12" sm="2" Class="d-flex align-center">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadDataAsync"
+                           StartIcon="@Icons.Material.Filled.Search" FullWidth="true">
+                    Filtrar
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- Results -->
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else
+    {
+        <MudText Typo="Typo.body2" Class="mb-2 mud-text-secondary">
+            Mostrando @_items.Count de @_totalCount resultados
+        </MudText>
+
+        <MudTable Items="_items" Hover="true" Striped="true" Elevation="2">
+            <HeaderContent>
+                <MudTh>Título</MudTh>
+                <MudTh>Categoría</MudTh>
+                <MudTh>Tipo</MudTh>
+                <MudTh>Próxima Fecha</MudTh>
+                <MudTh>Estado</MudTh>
+                <MudTh>Alertas</MudTh>
+                <MudTh Style="width: 180px">Acciones</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    <MudLink Href="@($"/backoffice/reminders/{context.Id}")">@context.Title</MudLink>
+                    @if (context.Tags.Any())
+                    {
+                        <div class="mt-1">
+                            @foreach (var tag in context.Tags.Take(3))
+                            {
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@tag</MudChip>
+                            }
+                        </div>
+                    }
+                </MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small" Color="@GetCategoryColor(context.Category)">
+                        @context.Category
+                    </MudChip>
+                </MudTd>
+                <MudTd>
+                    @if (context.ScheduleType == ScheduleType.Recurring)
+                    {
+                        <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Repeat" Color="Color.Secondary">
+                            @context.RecurrenceFrequency
+                        </MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Event" Variant="Variant.Outlined">
+                            Único
+                        </MudChip>
+                    }
+                </MudTd>
+                <MudTd>
+                    @if (context.NextOccurrenceAt.HasValue)
+                    {
+                        var days = (context.NextOccurrenceAt.Value - DateTime.UtcNow).Days;
+                        <span style="@(days < 0 ? "color: #d32f2f; font-weight: bold;" : days <= 7 ? "color: #ff9800;" : "")">
+                            @context.NextOccurrenceAt.Value.ToString("dd/MM/yyyy")
+                            @if (days < 0)
+                            {
+                                <text> (hace @(-days) días)</text>
+                            }
+                            else if (days == 0)
+                            {
+                                <text> (HOY)</text>
+                            }
+                            else if (days == 1)
+                            {
+                                <text> (mañana)</text>
+                            }
+                            else if (days <= 7)
+                            {
+                                <text> (en @days días)</text>
+                            }
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="mud-text-secondary">-</span>
+                    }
+                </MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">
+                        @context.Status
+                    </MudChip>
+                </MudTd>
+                <MudTd>
+                    @if (context.OpenAlertsCount > 0)
+                    {
+                        <MudBadge Content="@context.OpenAlertsCount" Color="Color.Error" Overlap="true">
+                            <MudIcon Icon="@Icons.Material.Filled.NotificationsActive" />
+                        </MudBadge>
+                    }
+                </MudTd>
+                <MudTd>
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.CheckCircle" 
+                                   Color="Color.Success" Title="Completar"
+                                   OnClick="@(() => CompleteAsync(context.Id))" />
+                    @if (context.Status == ItemStatus.Active)
+                    {
+                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Pause" 
+                                       Title="Pausar" OnClick="@(() => PauseAsync(context.Id))" />
+                    }
+                    else if (context.Status == ItemStatus.Paused)
+                    {
+                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.PlayArrow" 
+                                       Color="Color.Primary" Title="Reanudar"
+                                       OnClick="@(() => ResumeAsync(context.Id))" />
+                    }
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit" 
+                                   Href="@($"/backoffice/reminders/{context.Id}/edit")" />
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Delete" 
+                                   Color="Color.Error" Title="Archivar"
+                                   OnClick="@(() => DeleteAsync(context.Id))" />
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new int[] { 10, 25, 50, 100 }" />
+            </PagerContent>
+        </MudTable>
+    }
+</MudContainer>
+
+@code {
+    [Inject] private IReminderService ReminderService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private bool _loading = true;
+    private List<ReminderItemDto> _items = [];
+    private int _totalCount;
+    
+    private string? _searchText;
+    private Category? _filterCategory;
+    private ItemStatus? _filterStatus = ItemStatus.Active;
+    private string? _filterTag;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            _items = (await ReminderService.SearchAsync(
+                searchText: _searchText,
+                category: _filterCategory,
+                status: _filterStatus,
+                tag: _filterTag,
+                take: 100)).ToList();
+            
+            _totalCount = await ReminderService.CountAsync(
+                searchText: _searchText,
+                category: _filterCategory,
+                status: _filterStatus,
+                tag: _filterTag);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task CompleteAsync(Guid id)
+    {
+        await ReminderService.CompleteAsync(id);
+        Snackbar.Add("Recordatorio completado", MudBlazor.Severity.Success);
+        await LoadDataAsync();
+    }
+
+    private async Task PauseAsync(Guid id)
+    {
+        await ReminderService.PauseAsync(id);
+        Snackbar.Add("Recordatorio pausado", MudBlazor.Severity.Info);
+        await LoadDataAsync();
+    }
+
+    private async Task ResumeAsync(Guid id)
+    {
+        await ReminderService.ResumeAsync(id);
+        Snackbar.Add("Recordatorio reanudado", MudBlazor.Severity.Success);
+        await LoadDataAsync();
+    }
+
+    private async Task DeleteAsync(Guid id)
+    {
+        await ReminderService.DeleteAsync(id);
+        Snackbar.Add("Recordatorio archivado", MudBlazor.Severity.Warning);
+        await LoadDataAsync();
+    }
+
+    private static Color GetCategoryColor(Category category) => category switch
+    {
+        Category.Renewal => Color.Primary,
+        Category.Reminder => Color.Secondary,
+        _ => Color.Default
+    };
+
+    private static Color GetStatusColor(ItemStatus status) => status switch
+    {
+        ItemStatus.Active => Color.Success,
+        ItemStatus.Paused => Color.Warning,
+        ItemStatus.Archived => Color.Default,
+        _ => Color.Default
+    };
+}

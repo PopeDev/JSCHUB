@@ -1,0 +1,108 @@
+﻿@inherits LayoutComponentBase
+@implements IDisposable
+@using JSCHUB.Application.Interfaces
+@inject ICurrentUserService CurrentUser
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<MudThemeProvider @ref="_themeProvider" @bind-IsDarkMode="_isDarkMode" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1" Dense="true">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" 
+                       OnClick="@(() => _drawerOpen = !_drawerOpen)" />
+        <MudText Typo="Typo.h6" Class="ml-2">JSCHUB Backoffice</MudText>
+        <MudSpacer />
+        
+        @if (CurrentUser.IsAuthenticated)
+        {
+            <MudText Typo="Typo.body2" Class="mr-3">
+                Sesión iniciada como: <strong>@CurrentUser.CurrentUserName</strong>
+            </MudText>
+            <MudButton Variant="Variant.Text" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.Logout"
+                       OnClick="HandleLogout" Size="Size.Small">
+                Cerrar sesión
+            </MudButton>
+        }
+        
+        <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)" 
+                       Color="Color.Inherit" OnClick="@(() => _isDarkMode = !_isDarkMode)" Class="ml-2" />
+    </MudAppBar>
+    
+    <MudDrawer @bind-Open="_drawerOpen" Elevation="2" Variant="DrawerVariant.Mini" 
+               OpenMiniOnHover="true" ClipMode="DrawerClipMode.Always">
+        <MudNavMenu>
+            <MudNavLink Href="/backoffice/monitor" Icon="@Icons.Material.Filled.Dashboard">
+                Monitor
+            </MudNavLink>
+            <MudNavLink Href="/backoffice/reminders" Icon="@Icons.Material.Filled.EventNote">
+                Recordatorios
+            </MudNavLink>
+            <MudNavLink Href="/backoffice/reminders/new" Icon="@Icons.Material.Filled.Add">
+                Nuevo
+            </MudNavLink>
+            <MudDivider Class="my-2" />
+            <MudNavLink Href="/" Icon="@Icons.Material.Filled.Home">
+                Inicio
+            </MudNavLink>
+        </MudNavMenu>
+    </MudDrawer>
+    
+    <MudMainContent>
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private MudThemeProvider _themeProvider = default!;
+    private bool _isDarkMode = false;
+    private bool _drawerOpen = true;
+
+    protected override void OnInitialized()
+    {
+        // Verificar autenticación para rutas del backoffice
+        CheckAuthentication();
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        CheckAuthentication();
+        StateHasChanged();
+    }
+
+    private void CheckAuthentication()
+    {
+        var uri = new Uri(Navigation.Uri);
+        var isBackofficePath = uri.AbsolutePath.StartsWith("/backoffice", StringComparison.OrdinalIgnoreCase);
+        
+        if (isBackofficePath && !CurrentUser.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _isDarkMode = await _themeProvider.GetSystemPreference();
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleLogout()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+}
+

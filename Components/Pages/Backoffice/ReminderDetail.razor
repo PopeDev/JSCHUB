@@ -1,0 +1,298 @@
+@page "/backoffice/reminders/{Id:guid}"
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@using JSCHUB.Domain.Entities
+@using JSCHUB.Domain.Enums
+@rendermode InteractiveServer
+
+<PageTitle>Detalle Recordatorio - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else if (_item == null)
+    {
+        <MudAlert Severity="MudBlazor.Severity.Error">Recordatorio no encontrado</MudAlert>
+    }
+    else
+    {
+        <div class="d-flex justify-space-between align-center mb-4">
+            <div>
+                <MudText Typo="Typo.h4">@_item.Title</MudText>
+                <div class="d-flex gap-2 mt-1">
+                    <MudChip T="string" Size="Size.Small" Color="@GetCategoryColor(_item.Category)">@_item.Category</MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(_item.Status)">@_item.Status</MudChip>
+                    @if (_item.ScheduleType == ScheduleType.Recurring)
+                    {
+                        <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Repeat">@_item.RecurrenceFrequency</MudChip>
+                    }
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <MudButton Variant="Variant.Outlined" Href="/backoffice/reminders">
+                    <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Class="mr-1" /> Volver
+                </MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                           Href="@($"/backoffice/reminders/{Id}/edit")">
+                    <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-1" /> Editar
+                </MudButton>
+            </div>
+        </div>
+
+        <MudGrid>
+            <!-- Main Info -->
+            <MudItem xs="12" md="8">
+                <MudPaper Class="pa-4 mb-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Información</MudText>
+                    
+                    @if (!string.IsNullOrEmpty(_item.Description))
+                    {
+                        <MudText Class="mb-3">@_item.Description</MudText>
+                    }
+
+                    <MudGrid>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Próxima Ocurrencia</MudText>
+                            <MudText Typo="Typo.body1" Style="@GetDateStyle(_item.NextOccurrenceAt)">
+                                @(_item.NextOccurrenceAt?.ToString("dd/MM/yyyy HH:mm") ?? "-")
+                            </MudText>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Última Ocurrencia</MudText>
+                            <MudText Typo="Typo.body1">
+                                @(_item.LastOccurrenceAt?.ToString("dd/MM/yyyy HH:mm") ?? "-")
+                            </MudText>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Responsable</MudText>
+                            <MudText Typo="Typo.body1">@(_item.Assignee ?? "-")</MudText>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Aviso con antelación</MudText>
+                            <MudText Typo="Typo.body1">@string.Join(", ", _item.LeadTimeDays.Select(d => $"{d} días"))</MudText>
+                        </MudItem>
+                    </MudGrid>
+
+                    @if (_item.Tags.Any())
+                    {
+                        <MudDivider Class="my-3" />
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary mb-1">Etiquetas</MudText>
+                        <MudChipSet T="string" ReadOnly="true">
+                            @foreach (var tag in _item.Tags)
+                            {
+                                <MudChip Text="@tag" Size="Size.Small" />
+                            }
+                        </MudChipSet>
+                    }
+
+                    @if (_item.Metadata.Any())
+                    {
+                        <MudDivider Class="my-3" />
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary mb-2">Metadata</MudText>
+                        <MudSimpleTable Dense="true" Bordered="true">
+                            <tbody>
+                                @foreach (var kvp in _item.Metadata)
+                                {
+                                    <tr>
+                                        <td style="width: 30%; font-weight: 500;">@kvp.Key</td>
+                                        <td>@kvp.Value</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </MudSimpleTable>
+                    }
+                </MudPaper>
+
+                <!-- Alerts -->
+                <MudPaper Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Alertas</MudText>
+                    @if (!_alerts.Any())
+                    {
+                        <MudText Class="mud-text-secondary">No hay alertas para este recordatorio</MudText>
+                    }
+                    else
+                    {
+                        <MudTimeline>
+                            @foreach (var alert in _alerts)
+                            {
+                                <MudTimelineItem Color="@GetAlertColor(alert.State)" Size="Size.Small">
+                                    <ItemContent>
+                                        <MudText Typo="Typo.body2">
+                                            <strong>@alert.State</strong> - @alert.Message
+                                        </MudText>
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                            @alert.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                                        </MudText>
+                                    </ItemContent>
+                                </MudTimelineItem>
+                            }
+                        </MudTimeline>
+                    }
+                </MudPaper>
+            </MudItem>
+
+            <!-- Sidebar -->
+            <MudItem xs="12" md="4">
+                <!-- Quick Actions -->
+                <MudPaper Class="pa-4 mb-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Acciones Rápidas</MudText>
+                    <MudStack Spacing="2">
+                        <MudButton Variant="Variant.Filled" Color="Color.Success" FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.CheckCircle"
+                                   OnClick="CompleteAsync">
+                            Marcar como Completado
+                        </MudButton>
+                        @if (_item.Status == ItemStatus.Active)
+                        {
+                            <MudButton Variant="Variant.Outlined" FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.Pause"
+                                       OnClick="PauseAsync">
+                                Pausar
+                            </MudButton>
+                        }
+                        else if (_item.Status == ItemStatus.Paused)
+                        {
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.PlayArrow"
+                                       OnClick="ResumeAsync">
+                                Reanudar
+                            </MudButton>
+                        }
+                        <MudButton Variant="Variant.Outlined" Color="Color.Error" FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.Archive"
+                                   OnClick="ArchiveAsync">
+                            Archivar
+                        </MudButton>
+                    </MudStack>
+                </MudPaper>
+
+                <!-- Audit Log -->
+                <MudPaper Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Historial</MudText>
+                    @if (!_auditLogs.Any())
+                    {
+                        <MudText Class="mud-text-secondary">Sin historial</MudText>
+                    }
+                    else
+                    {
+                        <MudList T="AuditLog" Dense="true">
+                            @foreach (var log in _auditLogs.Take(10))
+                            {
+                                <MudListItem>
+                                    <div>
+                                        <MudText Typo="Typo.body2">
+                                            <strong>@log.Action</strong> por @log.User
+                                        </MudText>
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                            @log.At.ToString("dd/MM/yyyy HH:mm")
+                                        </MudText>
+                                    </div>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    }
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    
+    [Inject] private IReminderService ReminderService { get; set; } = default!;
+    [Inject] private IAlertService AlertService { get; set; } = default!;
+    [Inject] private IAuditService AuditService { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private bool _loading = true;
+    private ReminderItemDto? _item;
+    private List<AlertDto> _alerts = [];
+    private List<AuditLog> _auditLogs = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            _item = await ReminderService.GetByIdAsync(Id);
+            if (_item != null)
+            {
+                _alerts = (await AlertService.GetByReminderItemIdAsync(Id)).ToList();
+                _auditLogs = (await AuditService.GetByEntityAsync("ReminderItem", Id)).ToList();
+            }
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task CompleteAsync()
+    {
+        await ReminderService.CompleteAsync(Id);
+        Snackbar.Add("Recordatorio completado", MudBlazor.Severity.Success);
+        await LoadDataAsync();
+    }
+
+    private async Task PauseAsync()
+    {
+        await ReminderService.PauseAsync(Id);
+        Snackbar.Add("Recordatorio pausado", MudBlazor.Severity.Info);
+        await LoadDataAsync();
+    }
+
+    private async Task ResumeAsync()
+    {
+        await ReminderService.ResumeAsync(Id);
+        Snackbar.Add("Recordatorio reanudado", MudBlazor.Severity.Success);
+        await LoadDataAsync();
+    }
+
+    private async Task ArchiveAsync()
+    {
+        await ReminderService.DeleteAsync(Id);
+        Snackbar.Add("Recordatorio archivado", MudBlazor.Severity.Warning);
+        Navigation.NavigateTo("/backoffice/reminders");
+    }
+
+    private static Color GetCategoryColor(Category category) => category switch
+    {
+        Category.Renewal => Color.Primary,
+        Category.Reminder => Color.Secondary,
+        _ => Color.Default
+    };
+
+    private static Color GetStatusColor(ItemStatus status) => status switch
+    {
+        ItemStatus.Active => Color.Success,
+        ItemStatus.Paused => Color.Warning,
+        ItemStatus.Archived => Color.Default,
+        _ => Color.Default
+    };
+
+    private static Color GetAlertColor(AlertState state) => state switch
+    {
+        AlertState.Open => Color.Error,
+        AlertState.Acknowledged => Color.Warning,
+        AlertState.Snoozed => Color.Info,
+        AlertState.Resolved => Color.Success,
+        _ => Color.Default
+    };
+
+    private static string GetDateStyle(DateTime? date)
+    {
+        if (!date.HasValue) return "";
+        var days = (date.Value - DateTime.UtcNow).Days;
+        return days < 0 ? "color: #d32f2f; font-weight: bold;" : 
+               days <= 7 ? "color: #ff9800; font-weight: bold;" : "";
+    }
+}

@@ -1,0 +1,312 @@
+@page "/backoffice/reminders/new"
+@page "/backoffice/reminders/{Id:guid}/edit"
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@using JSCHUB.Domain.Enums
+@rendermode InteractiveServer
+
+<PageTitle>@(_isEdit ? "Editar" : "Nuevo") Recordatorio - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">
+        <MudIcon Icon="@(_isEdit ? Icons.Material.Filled.Edit : Icons.Material.Filled.Add)" Class="mr-2" />
+        @(_isEdit ? "Editar" : "Nuevo") Recordatorio
+    </MudText>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else
+    {
+        <MudPaper Class="pa-4">
+            <MudForm @ref="_form" @bind-IsValid="_isValid">
+                <MudGrid>
+                    <!-- Basic Info -->
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_title" Label="Título" Required="true" 
+                                      RequiredError="El título es requerido"
+                                      Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_description" Label="Descripción" Lines="3"
+                                      Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="Category" @bind-Value="_category" Label="Categoría"
+                                   Variant="Variant.Outlined">
+                            <MudSelectItem Value="Category.Renewal">Renovación</MudSelectItem>
+                            <MudSelectItem Value="Category.Reminder">Recordatorio</MudSelectItem>
+                            <MudSelectItem Value="Category.Other">Otro</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_assignee" Label="Responsable"
+                                      Variant="Variant.Outlined" />
+                    </MudItem>
+
+                    <!-- Schedule -->
+                    <MudItem xs="12">
+                        <MudDivider Class="my-2" />
+                        <MudText Typo="Typo.h6" Class="mb-2">Programación</MudText>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="ScheduleType" @bind-Value="_scheduleType" Label="Tipo"
+                                   Variant="Variant.Outlined">
+                            <MudSelectItem Value="ScheduleType.OneTime">Único</MudSelectItem>
+                            <MudSelectItem Value="ScheduleType.Recurring">Recurrente</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudDatePicker @bind-Date="_dueAt" Label="@(_scheduleType == ScheduleType.OneTime ? "Fecha de vencimiento" : "Primera ocurrencia")"
+                                       Variant="Variant.Outlined" />
+                    </MudItem>
+                    
+                    @if (_scheduleType == ScheduleType.Recurring)
+                    {
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="RecurrenceFrequency" @bind-Value="_recurrenceFrequency" Label="Frecuencia"
+                                       Variant="Variant.Outlined">
+                                <MudSelectItem Value="RecurrenceFrequency.Weekly">Semanal</MudSelectItem>
+                                <MudSelectItem Value="RecurrenceFrequency.Monthly">Mensual</MudSelectItem>
+                                <MudSelectItem Value="RecurrenceFrequency.Quarterly">Trimestral</MudSelectItem>
+                                <MudSelectItem Value="RecurrenceFrequency.Yearly">Anual</MudSelectItem>
+                                <MudSelectItem Value="RecurrenceFrequency.Custom">Personalizado</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        @if (_recurrenceFrequency == RecurrenceFrequency.Custom)
+                        {
+                            <MudItem xs="12" sm="6">
+                                <MudNumericField T="int" @bind-Value="_customIntervalDays" 
+                                                 Label="Intervalo (días)" Min="1"
+                                                 Variant="Variant.Outlined" />
+                            </MudItem>
+                        }
+                    }
+
+                    <!-- Lead Time -->
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField T="int" @bind-Value="_leadTimeDays" 
+                                         Label="Avisar con antelación (días)" Min="0"
+                                         Variant="Variant.Outlined" />
+                    </MudItem>
+
+                    <!-- Tags -->
+                    <MudItem xs="12">
+                        <MudDivider Class="my-2" />
+                        <MudText Typo="Typo.h6" Class="mb-2">Etiquetas</MudText>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudChipSet T="string" AllClosable="true" OnClose="RemoveTag">
+                            @foreach (var tag in _tags)
+                            {
+                                <MudChip Text="@tag" />
+                            }
+                        </MudChipSet>
+                        <div class="d-flex gap-2 mt-2">
+                            <MudTextField @bind-Value="_newTag" Label="Nueva etiqueta" 
+                                          Variant="Variant.Outlined" Dense="true" />
+                            <MudButton Variant="Variant.Outlined" OnClick="AddTag">Añadir</MudButton>
+                        </div>
+                    </MudItem>
+
+                    <!-- Metadata -->
+                    <MudItem xs="12">
+                        <MudDivider Class="my-2" />
+                        <MudText Typo="Typo.h6" Class="mb-2">Datos Adicionales (Metadata)</MudText>
+                    </MudItem>
+                    <MudItem xs="12">
+                        @foreach (var kvp in _metadata.ToList())
+                        {
+                            <MudGrid Class="mb-2">
+                                <MudItem xs="5">
+                                    <MudTextField Value="@kvp.Key" Label="Clave" Disabled="true" 
+                                                  Variant="Variant.Outlined" Dense="true" />
+                                </MudItem>
+                                <MudItem xs="5">
+                                    <MudTextField Value="@kvp.Value" Label="Valor" 
+                                                  ValueChanged="@((string v) => UpdateMetadata(kvp.Key, v))"
+                                                  Variant="Variant.Outlined" Dense="true" />
+                                </MudItem>
+                                <MudItem xs="2" Class="d-flex align-center">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
+                                                   OnClick="@(() => RemoveMetadata(kvp.Key))" />
+                                </MudItem>
+                            </MudGrid>
+                        }
+                        <div class="d-flex gap-2 mt-2">
+                            <MudTextField @bind-Value="_newMetaKey" Label="Clave" 
+                                          Variant="Variant.Outlined" Dense="true" />
+                            <MudTextField @bind-Value="_newMetaValue" Label="Valor" 
+                                          Variant="Variant.Outlined" Dense="true" />
+                            <MudButton Variant="Variant.Outlined" OnClick="AddMetadata">Añadir</MudButton>
+                        </div>
+                    </MudItem>
+
+                    <!-- Actions -->
+                    <MudItem xs="12" Class="d-flex justify-end gap-2 mt-4">
+                        <MudButton Variant="Variant.Text" Href="/backoffice/reminders">Cancelar</MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                                   Disabled="!_isValid || _saving"
+                                   OnClick="SaveAsync">
+                            @if (_saving)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            }
+                            Guardar
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
+            </MudForm>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+    
+    [Inject] private IReminderService ReminderService { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private MudForm _form = default!;
+    private bool _isValid;
+    private bool _loading = true;
+    private bool _saving;
+    private bool _isEdit => Id.HasValue;
+
+    // Form fields
+    private string _title = "";
+    private string? _description;
+    private Category _category = Category.Reminder;
+    private string? _assignee;
+    private ScheduleType _scheduleType = ScheduleType.OneTime;
+    private DateTime? _dueAt = DateTime.Today.AddMonths(1);
+    private RecurrenceFrequency _recurrenceFrequency = RecurrenceFrequency.Monthly;
+    private int _customIntervalDays = 30;
+    private int _leadTimeDays = 30;
+    private List<string> _tags = [];
+    private Dictionary<string, string> _metadata = new();
+    
+    private string _newTag = "";
+    private string _newMetaKey = "";
+    private string _newMetaValue = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_isEdit && Id.HasValue)
+        {
+            var item = await ReminderService.GetByIdAsync(Id.Value);
+            if (item != null)
+            {
+                _title = item.Title;
+                _description = item.Description;
+                _category = item.Category;
+                _assignee = item.Assignee;
+                _scheduleType = item.ScheduleType;
+                _dueAt = item.DueAt ?? item.NextOccurrenceAt;
+                _recurrenceFrequency = item.RecurrenceFrequency ?? RecurrenceFrequency.Monthly;
+                _customIntervalDays = item.CustomIntervalDays ?? 30;
+                _leadTimeDays = item.LeadTimeDays.FirstOrDefault(30);
+                _tags = item.Tags.ToList();
+                _metadata = item.Metadata.ToDictionary(x => x.Key, x => x.Value);
+            }
+        }
+        _loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        await _form.Validate();
+        if (!_isValid) return;
+
+        _saving = true;
+        try
+        {
+            if (_isEdit && Id.HasValue)
+            {
+                var dto = new UpdateReminderItemDto(
+                    _title,
+                    _description,
+                    _category,
+                    _tags,
+                    _assignee,
+                    ItemStatus.Active,
+                    _scheduleType,
+                    _dueAt,
+                    _scheduleType == ScheduleType.Recurring ? _recurrenceFrequency : null,
+                    _recurrenceFrequency == RecurrenceFrequency.Custom ? _customIntervalDays : null,
+                    "Europe/Madrid",
+                    [_leadTimeDays],
+                    _metadata
+                );
+                await ReminderService.UpdateAsync(Id.Value, dto);
+                Snackbar.Add("Recordatorio actualizado", MudBlazor.Severity.Success);
+            }
+            else
+            {
+                var dto = new CreateReminderItemDto(
+                    _title,
+                    _description,
+                    _category,
+                    _tags,
+                    _assignee,
+                    _scheduleType,
+                    _dueAt,
+                    _scheduleType == ScheduleType.Recurring ? _recurrenceFrequency : null,
+                    _recurrenceFrequency == RecurrenceFrequency.Custom ? _customIntervalDays : null,
+                    "Europe/Madrid",
+                    [_leadTimeDays],
+                    _metadata
+                );
+                await ReminderService.CreateAsync(dto);
+                Snackbar.Add("Recordatorio creado", MudBlazor.Severity.Success);
+            }
+            
+            Navigation.NavigateTo("/backoffice/reminders");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", MudBlazor.Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void AddTag()
+    {
+        if (!string.IsNullOrWhiteSpace(_newTag) && !_tags.Contains(_newTag))
+        {
+            _tags.Add(_newTag);
+            _newTag = "";
+        }
+    }
+
+    private void RemoveTag(MudChip<string> chip)
+    {
+        if (chip.Text != null)
+            _tags.Remove(chip.Text);
+    }
+
+    private void AddMetadata()
+    {
+        if (!string.IsNullOrWhiteSpace(_newMetaKey) && !_metadata.ContainsKey(_newMetaKey))
+        {
+            _metadata[_newMetaKey] = _newMetaValue;
+            _newMetaKey = "";
+            _newMetaValue = "";
+        }
+    }
+
+    private void UpdateMetadata(string key, string value)
+    {
+        _metadata[key] = value;
+    }
+
+    private void RemoveMetadata(string key)
+    {
+        _metadata.Remove(key);
+    }
+}

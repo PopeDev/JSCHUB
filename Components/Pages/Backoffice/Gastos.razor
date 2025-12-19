@@ -1,0 +1,216 @@
+@page "/backoffice/gastos"
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@using JSCHUB.Domain.Enums
+@rendermode InteractiveServer
+
+<PageTitle>Gastos - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h4">
+            <MudIcon Icon="@Icons.Material.Filled.Receipt" Class="mr-2" />
+            Gastos
+        </MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.Add"
+                   Href="/backoffice/gastos/new">
+            Nuevo Gasto
+        </MudButton>
+    </div>
+
+    <!-- Filtros -->
+    <MudPaper Class="pa-3 mb-4">
+        <MudGrid>
+            <MudItem xs="12" sm="3">
+                <MudTextField @bind-Value="_searchText" Label="Buscar" 
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                              Variant="Variant.Outlined" Dense="true" 
+                              DebounceInterval="300" OnDebounceIntervalElapsed="LoadDataAsync" />
+            </MudItem>
+            <MudItem xs="6" sm="2">
+                <MudSelect T="Guid?" @bind-Value="_filterPagadoPorId" Label="Pagado por" Clearable="true"
+                           Variant="Variant.Outlined" Dense="true">
+                    @foreach (var persona in _personas)
+                    {
+                        <MudSelectItem Value="@((Guid?)persona.Id)">@persona.Nombre</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="6" sm="2">
+                <MudDatePicker @bind-Date="_filterFechaDesde" Label="Desde" 
+                               Variant="Variant.Outlined" Dense="true" Clearable="true" />
+            </MudItem>
+            <MudItem xs="6" sm="2">
+                <MudDatePicker @bind-Date="_filterFechaHasta" Label="Hasta" 
+                               Variant="Variant.Outlined" Dense="true" Clearable="true" />
+            </MudItem>
+            <MudItem xs="6" sm="1">
+                <MudSelect T="EstadoGasto?" @bind-Value="_filterEstado" Label="Estado" Clearable="true"
+                           Variant="Variant.Outlined" Dense="true">
+                    <MudSelectItem Value="@((EstadoGasto?)EstadoGasto.Registrado)">Registrado</MudSelectItem>
+                    <MudSelectItem Value="@((EstadoGasto?)EstadoGasto.Saldado)">Saldado</MudSelectItem>
+                    <MudSelectItem Value="@((EstadoGasto?)EstadoGasto.Anulado)">Anulado</MudSelectItem>
+                    <MudSelectItem Value="@((EstadoGasto?)EstadoGasto.PendienteDevolucion)">Pte. Devolución</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="2" Class="d-flex align-center">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadDataAsync"
+                           StartIcon="@Icons.Material.Filled.Search" FullWidth="true">
+                    Filtrar
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- Resultados -->
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else
+    {
+        <MudText Typo="Typo.body2" Class="mb-2 mud-text-secondary">
+            Mostrando @_gastos.Count de @_totalCount resultados
+            @if (_gastos.Any())
+            {
+                <text> · Total: <strong>@_gastos.Sum(g => g.Importe).ToString("N2") EUR</strong></text>
+            }
+        </MudText>
+
+        <MudTable Items="_gastos" Hover="true" Striped="true" Elevation="2">
+            <HeaderContent>
+                <MudTh>Fecha</MudTh>
+                <MudTh>Concepto</MudTh>
+                <MudTh Style="text-align: right">Importe</MudTh>
+                <MudTh>Pagado por</MudTh>
+                <MudTh>Estado</MudTh>
+                <MudTh Style="width: 150px">Acciones</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    <div>@context.FechaPago.ToString("dd/MM/yyyy")</div>
+                    <div class="mud-text-secondary" style="font-size: 0.85em">@context.HoraPago.ToString("HH:mm")</div>
+                </MudTd>
+                <MudTd>
+                    <MudLink Href="@($"/backoffice/gastos/{context.Id}")">@context.Concepto</MudLink>
+                    @if (!string.IsNullOrEmpty(context.Notas))
+                    {
+                        <div class="mud-text-secondary" style="font-size: 0.85em">@TruncateNotes(context.Notas)</div>
+                    }
+                </MudTd>
+                <MudTd Style="text-align: right; font-weight: bold">
+                    @context.Importe.ToString("N2") @context.Moneda
+                </MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                        @context.PagadoPorNombre
+                    </MudChip>
+                </MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small" Color="@GetEstadoColor(context.Estado)">
+                        @GetEstadoLabel(context.Estado)
+                    </MudChip>
+                </MudTd>
+                <MudTd>
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Visibility" 
+                                   Href="@($"/backoffice/gastos/{context.Id}")" Title="Ver detalle" />
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit" 
+                                   Href="@($"/backoffice/gastos/{context.Id}/edit")" Title="Editar" />
+                    @if (context.Estado == EstadoGasto.Registrado)
+                    {
+                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Cancel" 
+                                       Color="Color.Error" Title="Anular"
+                                       OnClick="@(() => AnularAsync(context.Id))" />
+                    }
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText Class="pa-4">No hay gastos registrados.</MudText>
+            </NoRecordsContent>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new int[] { 10, 25, 50, 100 }" />
+            </PagerContent>
+        </MudTable>
+    }
+</MudContainer>
+
+@code {
+    [Inject] private IGastoService GastoService { get; set; } = default!;
+    [Inject] private IPersonaService PersonaService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private bool _loading = true;
+    private List<GastoDto> _gastos = [];
+    private List<PersonaDto> _personas = [];
+    private int _totalCount;
+    
+    private string? _searchText;
+    private Guid? _filterPagadoPorId;
+    private DateTime? _filterFechaDesde;
+    private DateTime? _filterFechaHasta;
+    private EstadoGasto? _filterEstado = EstadoGasto.Registrado;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _personas = (await PersonaService.GetAllAsync()).ToList();
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            var fechaDesde = _filterFechaDesde.HasValue ? DateOnly.FromDateTime(_filterFechaDesde.Value) : (DateOnly?)null;
+            var fechaHasta = _filterFechaHasta.HasValue ? DateOnly.FromDateTime(_filterFechaHasta.Value) : (DateOnly?)null;
+            
+            _gastos = (await GastoService.SearchAsync(
+                searchText: _searchText,
+                pagadoPorId: _filterPagadoPorId,
+                fechaDesde: fechaDesde,
+                fechaHasta: fechaHasta,
+                estado: _filterEstado,
+                take: 100)).ToList();
+            
+            _totalCount = await GastoService.CountAsync(
+                searchText: _searchText,
+                pagadoPorId: _filterPagadoPorId,
+                fechaDesde: fechaDesde,
+                fechaHasta: fechaHasta,
+                estado: _filterEstado);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task AnularAsync(Guid id)
+    {
+        await GastoService.AnularAsync(id);
+        Snackbar.Add("Gasto anulado", MudBlazor.Severity.Warning);
+        await LoadDataAsync();
+    }
+
+    private static string TruncateNotes(string notes) => 
+        notes.Length > 50 ? notes[..50] + "..." : notes;
+
+    private static Color GetEstadoColor(EstadoGasto estado) => estado switch
+    {
+        EstadoGasto.Registrado => Color.Info,
+        EstadoGasto.Saldado => Color.Success,
+        EstadoGasto.Anulado => Color.Default,
+        EstadoGasto.PendienteDevolucion => Color.Warning,
+        _ => Color.Default
+    };
+
+    private static string GetEstadoLabel(EstadoGasto estado) => estado switch
+    {
+        EstadoGasto.Registrado => "Registrado",
+        EstadoGasto.Saldado => "Saldado",
+        EstadoGasto.Anulado => "Anulado",
+        EstadoGasto.PendienteDevolucion => "Pte. Devolución",
+        _ => estado.ToString()
+    };
+}

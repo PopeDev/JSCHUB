@@ -1,0 +1,86 @@
+﻿@page "/"
+
+<PageTitle>JSCHUB - Backoffice</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudText Typo="Typo.h3" Align="Align.Center" Class="mb-4">
+        Bienvenido a JSCHUB
+    </MudText>
+    <MudText Typo="Typo.h6" Align="Align.Center" Class="mud-text-secondary mb-8">
+        Sistema de Gestión de Renovaciones y Recordatorios
+    </MudText>
+    
+    <MudGrid Justify="Justify.Center">
+        <MudItem xs="12" sm="6" md="4">
+            <MudCard Class="mud-height-full" Elevation="3">
+                <MudCardHeader>
+                    <CardHeaderAvatar>
+                        <MudAvatar Color="Color.Primary" Size="Size.Large">
+                            <MudIcon Icon="@Icons.Material.Filled.Dashboard" />
+                        </MudAvatar>
+                    </CardHeaderAvatar>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Monitor</MudText>
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Panel de alertas</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudText>Visualiza y gestiona todas las alertas activas, próximas y vencidas.</MudText>
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/backoffice/monitor">
+                        Ir al Monitor
+                    </MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+        
+        <MudItem xs="12" sm="6" md="4">
+            <MudCard Class="mud-height-full" Elevation="3">
+                <MudCardHeader>
+                    <CardHeaderAvatar>
+                        <MudAvatar Color="Color.Secondary" Size="Size.Large">
+                            <MudIcon Icon="@Icons.Material.Filled.EventNote" />
+                        </MudAvatar>
+                    </CardHeaderAvatar>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Recordatorios</MudText>
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Gestión completa</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudText>Crea, edita y gestiona recordatorios y renovaciones con recurrencia.</MudText>
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton Variant="Variant.Text" Color="Color.Secondary" Href="/backoffice/reminders">
+                        Ver Recordatorios
+                    </MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+        
+        <MudItem xs="12" sm="6" md="4">
+            <MudCard Class="mud-height-full" Elevation="3">
+                <MudCardHeader>
+                    <CardHeaderAvatar>
+                        <MudAvatar Color="Color.Tertiary" Size="Size.Large">
+                            <MudIcon Icon="@Icons.Material.Filled.Add" />
+                        </MudAvatar>
+                    </CardHeaderAvatar>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Nuevo</MudText>
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Crear recordatorio</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudText>Añade un nuevo recordatorio o renovación con programación flexible.</MudText>
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton Variant="Variant.Text" Color="Color.Tertiary" Href="/backoffice/reminders/new">
+                        Crear Nuevo
+                    </MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+</MudContainer>

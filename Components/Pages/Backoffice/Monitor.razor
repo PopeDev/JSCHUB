@@ -1,0 +1,262 @@
+@page "/backoffice/monitor"
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@using JSCHUB.Domain.Enums
+@rendermode InteractiveServer
+
+<PageTitle>Monitor de Alertas - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.Notifications" Class="mr-2" />
+        Monitor de Alertas
+    </MudText>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else
+    {
+        <!-- Stats Cards -->
+        <MudGrid Class="mb-4">
+            <MudItem xs="6" sm="4" md="2">
+                <MudPaper Class="pa-4 text-center" Style="background: linear-gradient(135deg, #ef5350 0%, #d32f2f 100%); color: white;">
+                    <MudText Typo="Typo.h3">@_stats.Overdue</MudText>
+                    <MudText Typo="Typo.body2">Vencidos</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="2">
+                <MudPaper Class="pa-4 text-center" Style="background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); color: white;">
+                    <MudText Typo="Typo.h3">@_stats.DueToday</MudText>
+                    <MudText Typo="Typo.body2">Hoy</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="2">
+                <MudPaper Class="pa-4 text-center" Style="background: linear-gradient(135deg, #ffc107 0%, #ffa000 100%); color: white;">
+                    <MudText Typo="Typo.h3">@_stats.DueNext7Days</MudText>
+                    <MudText Typo="Typo.body2">Próximos 7 días</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="2">
+                <MudPaper Class="pa-4 text-center" Style="background: linear-gradient(135deg, #42a5f5 0%, #1976d2 100%); color: white;">
+                    <MudText Typo="Typo.h3">@_stats.TotalOpen</MudText>
+                    <MudText Typo="Typo.body2">Abiertas</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="2">
+                <MudPaper Class="pa-4 text-center" Style="background: linear-gradient(135deg, #9e9e9e 0%, #616161 100%); color: white;">
+                    <MudText Typo="Typo.h3">@_stats.Snoozed</MudText>
+                    <MudText Typo="Typo.body2">Pospuestas</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="4" md="2">
+                <MudPaper Class="pa-4 text-center" Style="background: linear-gradient(135deg, #66bb6a 0%, #43a047 100%); color: white;">
+                    <MudText Typo="Typo.h3">@_stats.ResolvedToday</MudText>
+                    <MudText Typo="Typo.body2">Resueltas hoy</MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Filters -->
+        <MudPaper Class="pa-3 mb-4">
+            <MudGrid>
+                <MudItem xs="12" sm="4">
+                    <MudSelect T="AlertState?" @bind-Value="_filterState" Label="Estado" Clearable="true" 
+                               Variant="Variant.Outlined" Dense="true">
+                        <MudSelectItem Value="@((AlertState?)AlertState.Open)">Abiertas</MudSelectItem>
+                        <MudSelectItem Value="@((AlertState?)AlertState.Acknowledged)">Reconocidas</MudSelectItem>
+                        <MudSelectItem Value="@((AlertState?)AlertState.Snoozed)">Pospuestas</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSelect T="AlertSeverity?" @bind-Value="_filterSeverity" Label="Severidad" Clearable="true"
+                               Variant="Variant.Outlined" Dense="true">
+                        <MudSelectItem Value="@((AlertSeverity?)AlertSeverity.Critical)">Crítica</MudSelectItem>
+                        <MudSelectItem Value="@((AlertSeverity?)AlertSeverity.Warning)">Advertencia</MudSelectItem>
+                        <MudSelectItem Value="@((AlertSeverity?)AlertSeverity.Info)">Info</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="4" Class="d-flex align-center">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadDataAsync" 
+                               StartIcon="@Icons.Material.Filled.Refresh">
+                        Actualizar
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <!-- Alerts List -->
+        <MudPaper Class="pa-4">
+            @if (!_alerts.Any())
+            {
+                <MudAlert Severity="MudBlazor.Severity.Success" Class="mb-0">
+                    <MudText>¡No hay alertas pendientes! 🎉</MudText>
+                </MudAlert>
+            }
+            else
+            {
+                foreach (var alert in _alerts)
+                {
+                    <MudCard Class="mb-3" Elevation="2" Style="@GetCardStyle(alert.Severity)">
+                        <MudCardContent>
+                            <MudGrid>
+                                <MudItem xs="12" md="8">
+                                    <div class="d-flex align-center gap-2 mb-2">
+                                        <MudIcon Icon="@GetSeverityIcon(alert.Severity)" 
+                                                 Color="@GetSeverityColor(alert.Severity)" />
+                                        <MudChip T="string" Size="Size.Small" Color="@GetCategoryColor(alert.ReminderItemCategory)">
+                                            @alert.ReminderItemCategory
+                                        </MudChip>
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                                            @alert.State
+                                        </MudChip>
+                                    </div>
+                                    <MudText Typo="Typo.h6">@alert.Message</MudText>
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                                        Vence: @alert.OccurrenceAt?.ToString("dd/MM/yyyy HH:mm")
+                                        @if (alert.SnoozedUntil.HasValue)
+                                        {
+                                            <span> • Pospuesto hasta: @alert.SnoozedUntil.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                                        }
+                                    </MudText>
+                                </MudItem>
+                                <MudItem xs="12" md="4" Class="d-flex align-center justify-end gap-2">
+                                    @if (alert.State == AlertState.Open)
+                                    {
+                                        <MudButton Size="Size.Small" Variant="Variant.Outlined" 
+                                                   OnClick="@(() => AcknowledgeAsync(alert.Id))">
+                                            Reconocer
+                                        </MudButton>
+                                    }
+                                    <MudButton Size="Size.Small" Variant="Variant.Outlined" 
+                                               OnClick="@(() => OpenSnoozeDialog(alert))">
+                                        Posponer
+                                    </MudButton>
+                                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Success"
+                                               OnClick="@(() => CompleteAsync(alert))">
+                                        Completar
+                                    </MudButton>
+                                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.OpenInNew"
+                                                   Href="@($"/backoffice/reminders/{alert.ReminderItemId}")" />
+                                </MudItem>
+                            </MudGrid>
+                        </MudCardContent>
+                    </MudCard>
+                }
+            }
+        </MudPaper>
+    }
+</MudContainer>
+
+<!-- Snooze Dialog -->
+<MudDialog @bind-Visible="_snoozeDialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Posponer Alerta</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudDatePicker @bind-Date="_snoozeDate" Label="Posponer hasta" MinDate="DateTime.Today.AddDays(1)" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _snoozeDialogVisible = false)">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ConfirmSnoozeAsync">Confirmar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Inject] private IAlertService AlertService { get; set; } = default!;
+    [Inject] private IReminderService ReminderService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private bool _loading = true;
+    private AlertStatsDto _stats = new(0, 0, 0, 0, 0, 0);
+    private List<AlertDto> _alerts = [];
+    private AlertState? _filterState = AlertState.Open;
+    private AlertSeverity? _filterSeverity;
+    
+    private bool _snoozeDialogVisible;
+    private DateTime? _snoozeDate = DateTime.Today.AddDays(1);
+    private AlertDto? _selectedAlert;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            _stats = await AlertService.GetStatsAsync();
+            _alerts = (await AlertService.SearchAsync(
+                state: _filterState, 
+                severity: _filterSeverity,
+                take: 100)).ToList();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task AcknowledgeAsync(Guid alertId)
+    {
+        await AlertService.AcknowledgeAsync(alertId);
+        Snackbar.Add("Alerta reconocida", MudBlazor.Severity.Info);
+        await LoadDataAsync();
+    }
+
+    private void OpenSnoozeDialog(AlertDto alert)
+    {
+        _selectedAlert = alert;
+        _snoozeDate = DateTime.Today.AddDays(1);
+        _snoozeDialogVisible = true;
+    }
+
+    private async Task ConfirmSnoozeAsync()
+    {
+        if (_selectedAlert != null && _snoozeDate.HasValue)
+        {
+            await AlertService.SnoozeAsync(_selectedAlert.Id, _snoozeDate.Value);
+            Snackbar.Add("Alerta pospuesta", MudBlazor.Severity.Info);
+            _snoozeDialogVisible = false;
+            await LoadDataAsync();
+        }
+    }
+
+    private async Task CompleteAsync(AlertDto alert)
+    {
+        await ReminderService.CompleteAsync(alert.ReminderItemId);
+        Snackbar.Add("Recordatorio completado", MudBlazor.Severity.Success);
+        await LoadDataAsync();
+    }
+
+    private static string GetCardStyle(AlertSeverity severity) => severity switch
+    {
+        AlertSeverity.Critical => "border-left: 4px solid #d32f2f;",
+        AlertSeverity.Warning => "border-left: 4px solid #ff9800;",
+        _ => "border-left: 4px solid #2196f3;"
+    };
+
+    private static string GetSeverityIcon(AlertSeverity severity) => severity switch
+    {
+        AlertSeverity.Critical => Icons.Material.Filled.Error,
+        AlertSeverity.Warning => Icons.Material.Filled.Warning,
+        _ => Icons.Material.Filled.Info
+    };
+
+    private static Color GetSeverityColor(AlertSeverity severity) => severity switch
+    {
+        AlertSeverity.Critical => Color.Error,
+        AlertSeverity.Warning => Color.Warning,
+        _ => Color.Info
+    };
+
+    private static Color GetCategoryColor(Category category) => category switch
+    {
+        Category.Renewal => Color.Primary,
+        Category.Reminder => Color.Secondary,
+        _ => Color.Default
+    };
+}
