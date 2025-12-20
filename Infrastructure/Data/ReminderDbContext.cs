@@ -15,7 +15,7 @@ public class ReminderDbContext : DbContext
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     
     // Módulo de Gastos
-    public DbSet<Persona> Personas => Set<Persona>();
+    public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<Gasto> Gastos => Set<Gasto>();
 
     // Módulo de Proyectos

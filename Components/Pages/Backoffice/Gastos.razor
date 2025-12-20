@@ -12,7 +12,7 @@
             <MudIcon Icon="@Icons.Material.Filled.Receipt" Class="mr-2" />
             Gastos
         </MudText>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
                    StartIcon="@Icons.Material.Filled.Add"
                    Href="/backoffice/gastos/new">
             Nuevo Gasto
@@ -23,35 +23,37 @@
     <MudPaper Class="pa-3 mb-4">
         <MudGrid>
             <MudItem xs="12" sm="3">
-                <MudTextField @bind-Value="_searchText" Label="Buscar" 
+                <MudTextField @bind-Value="_searchText" Label="Buscar"
                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-                              Variant="Variant.Outlined" Dense="true" 
+                              Variant="Variant.Outlined" Dense="true"
                               DebounceInterval="300" OnDebounceIntervalElapsed="LoadDataAsync" />
             </MudItem>
             <MudItem xs="6" sm="2">
                 <MudSelect T="Guid?" @bind-Value="_filterPagadoPorId" Label="Pagado por" Clearable="true"
                            Variant="Variant.Outlined" Dense="true">
-                    @foreach (var persona in _personas)
+                    @foreach (var usuario in _usuarios)
                     {
-                        <MudSelectItem Value="@((Guid?)persona.Id)">@persona.Nombre</MudSelectItem>
+                        <MudSelectItem Value="@((Guid?)usuario.Id)">@usuario.Nombre</MudSelectItem>
                     }
                 </MudSelect>
             </MudItem>
             <MudItem xs="6" sm="2">
-                <MudDatePicker @bind-Date="_filterFechaDesde" Label="Desde" 
+                <MudDatePicker @bind-Date="_filterFechaDesde" Label="Desde"
                                Variant="Variant.Outlined" Dense="true" Clearable="true" />
             </MudItem>
             <MudItem xs="6" sm="2">
-                <MudDatePicker @bind-Date="_filterFechaHasta" Label="Hasta" 
+                <MudDatePicker @bind-Date="_filterFechaHasta" Label="Hasta"
                                Variant="Variant.Outlined" Dense="true" Clearable="true" />
             </MudItem>
             <MudItem xs="6" sm="1">
                 <MudSelect T="EstadoGasto?" @bind-Value="_filterEstado" Label="Estado" Clearable="true"
                            Variant="Variant.Outlined" Dense="true">
-                    <MudSelectItem Value="@((EstadoGasto?)EstadoGasto.Registrado)">Registrado</MudSelectItem>
+                    <MudSelectItem Value="@((EstadoGasto?)EstadoGasto.Previsto)">Previsto</MudSelectItem>
+                    <MudSelectItem Value="@((EstadoGasto?)EstadoGasto.Pendiente)">Pendiente</MudSelectItem>
+                    <MudSelectItem Value="@((EstadoGasto?)EstadoGasto.Pagado)">Pagado</MudSelectItem>
                     <MudSelectItem Value="@((EstadoGasto?)EstadoGasto.Saldado)">Saldado</MudSelectItem>
-                    <MudSelectItem Value="@((EstadoGasto?)EstadoGasto.Anulado)">Anulado</MudSelectItem>
                     <MudSelectItem Value="@((EstadoGasto?)EstadoGasto.PendienteDevolucion)">Pte. Devolución</MudSelectItem>
+                    <MudSelectItem Value="@((EstadoGasto?)EstadoGasto.Anulado)">Anulado</MudSelectItem>
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" sm="2" Class="d-flex align-center">
@@ -85,7 +87,7 @@
                 <MudTh Style="text-align: right">Importe</MudTh>
                 <MudTh>Pagado por</MudTh>
                 <MudTh>Estado</MudTh>
-                <MudTh Style="width: 150px">Acciones</MudTh>
+                <MudTh Style="width: 180px">Acciones</MudTh>
             </HeaderContent>
             <RowTemplate>
                 <MudTd>
@@ -113,16 +115,19 @@
                     </MudChip>
                 </MudTd>
                 <MudTd>
-                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Visibility" 
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Visibility"
                                    Href="@($"/backoffice/gastos/{context.Id}")" Title="Ver detalle" />
-                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit" 
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit"
                                    Href="@($"/backoffice/gastos/{context.Id}/edit")" Title="Editar" />
-                    @if (context.Estado == EstadoGasto.Registrado)
+                    @if (context.Estado != EstadoGasto.Anulado)
                     {
-                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Cancel" 
-                                       Color="Color.Error" Title="Anular"
-                                       OnClick="@(() => AnularAsync(context.Id))" />
+                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Cancel"
+                                       Color="Color.Warning" Title="Anular"
+                                       OnClick="@(() => ConfirmAnularAsync(context))" />
                     }
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Delete"
+                                   Color="Color.Error" Title="Eliminar"
+                                   OnClick="@(() => ConfirmDeleteAsync(context))" />
                 </MudTd>
             </RowTemplate>
             <NoRecordsContent>
@@ -135,25 +140,60 @@
     }
 </MudContainer>
 
+<MudMessageBox @ref="_anularConfirmation" Title="Confirmar anulación" CancelText="Cancelar">
+    <MessageContent>
+        ¿Estás seguro de que deseas anular el gasto <strong>@_gastoToAnular?.Concepto</strong>?
+        <br /><br />
+        <MudAlert Severity="Severity.Warning" Dense="true">
+            El gasto quedará marcado como anulado.
+        </MudAlert>
+    </MessageContent>
+    <YesButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Warning" StartIcon="@Icons.Material.Filled.Cancel">
+            Anular
+        </MudButton>
+    </YesButton>
+</MudMessageBox>
+
+<MudMessageBox @ref="_deleteConfirmation" Title="Confirmar eliminación" CancelText="Cancelar">
+    <MessageContent>
+        ¿Estás seguro de que deseas eliminar permanentemente el gasto <strong>@_gastoToDelete?.Concepto</strong>?
+        <br /><br />
+        <MudAlert Severity="Severity.Error" Dense="true">
+            Esta acción no se puede deshacer.
+        </MudAlert>
+    </MessageContent>
+    <YesButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete">
+            Eliminar
+        </MudButton>
+    </YesButton>
+</MudMessageBox>
+
 @code {
     [Inject] private IGastoService GastoService { get; set; } = default!;
-    [Inject] private IPersonaService PersonaService { get; set; } = default!;
+    [Inject] private IUsuarioService UsuarioService { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
 
     private bool _loading = true;
     private List<GastoDto> _gastos = [];
-    private List<PersonaDto> _personas = [];
+    private List<UsuarioDto> _usuarios = [];
     private int _totalCount;
-    
+
     private string? _searchText;
     private Guid? _filterPagadoPorId;
     private DateTime? _filterFechaDesde;
     private DateTime? _filterFechaHasta;
-    private EstadoGasto? _filterEstado = EstadoGasto.Registrado;
+    private EstadoGasto? _filterEstado;
+
+    private MudMessageBox _anularConfirmation = default!;
+    private MudMessageBox _deleteConfirmation = default!;
+    private GastoDto? _gastoToAnular;
+    private GastoDto? _gastoToDelete;
 
     protected override async Task OnInitializedAsync()
     {
-        _personas = (await PersonaService.GetAllAsync()).ToList();
+        _usuarios = (await UsuarioService.GetAllAsync()).ToList();
         await LoadDataAsync();
     }
 
@@ -164,7 +204,7 @@
         {
             var fechaDesde = _filterFechaDesde.HasValue ? DateOnly.FromDateTime(_filterFechaDesde.Value) : (DateOnly?)null;
             var fechaHasta = _filterFechaHasta.HasValue ? DateOnly.FromDateTime(_filterFechaHasta.Value) : (DateOnly?)null;
-            
+
             _gastos = (await GastoService.SearchAsync(
                 searchText: _searchText,
                 pagadoPorId: _filterPagadoPorId,
@@ -172,7 +212,7 @@
                 fechaHasta: fechaHasta,
                 estado: _filterEstado,
                 take: 100)).ToList();
-            
+
             _totalCount = await GastoService.CountAsync(
                 searchText: _searchText,
                 pagadoPorId: _filterPagadoPorId,
@@ -186,31 +226,61 @@
         }
     }
 
-    private async Task AnularAsync(Guid id)
+    private async Task ConfirmAnularAsync(GastoDto gasto)
     {
-        await GastoService.AnularAsync(id);
-        Snackbar.Add("Gasto anulado", MudBlazor.Severity.Warning);
-        await LoadDataAsync();
+        _gastoToAnular = gasto;
+        var result = await _anularConfirmation.ShowAsync();
+        if (result == true)
+        {
+            await GastoService.AnularAsync(gasto.Id);
+            Snackbar.Add("Gasto anulado", MudBlazor.Severity.Warning);
+            await LoadDataAsync();
+        }
+        _gastoToAnular = null;
     }
 
-    private static string TruncateNotes(string notes) => 
+    private async Task ConfirmDeleteAsync(GastoDto gasto)
+    {
+        _gastoToDelete = gasto;
+        var result = await _deleteConfirmation.ShowAsync();
+        if (result == true)
+        {
+            try
+            {
+                await GastoService.DeleteAsync(gasto.Id);
+                Snackbar.Add("Gasto eliminado", MudBlazor.Severity.Success);
+                await LoadDataAsync();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", MudBlazor.Severity.Error);
+            }
+        }
+        _gastoToDelete = null;
+    }
+
+    private static string TruncateNotes(string notes) =>
         notes.Length > 50 ? notes[..50] + "..." : notes;
 
     private static Color GetEstadoColor(EstadoGasto estado) => estado switch
     {
-        EstadoGasto.Registrado => Color.Info,
-        EstadoGasto.Saldado => Color.Success,
+        EstadoGasto.Previsto => Color.Info,
+        EstadoGasto.Pendiente => Color.Warning,
+        EstadoGasto.Pagado => Color.Success,
+        EstadoGasto.Saldado => Color.Primary,
+        EstadoGasto.PendienteDevolucion => Color.Secondary,
         EstadoGasto.Anulado => Color.Default,
-        EstadoGasto.PendienteDevolucion => Color.Warning,
         _ => Color.Default
     };
 
     private static string GetEstadoLabel(EstadoGasto estado) => estado switch
     {
-        EstadoGasto.Registrado => "Registrado",
+        EstadoGasto.Previsto => "Previsto",
+        EstadoGasto.Pendiente => "Pendiente",
+        EstadoGasto.Pagado => "Pagado",
         EstadoGasto.Saldado => "Saldado",
-        EstadoGasto.Anulado => "Anulado",
         EstadoGasto.PendienteDevolucion => "Pte. Devolución",
+        EstadoGasto.Anulado => "Anulado",
         _ => estado.ToString()
     };
 }

@@ -22,7 +22,7 @@ builder.Services.AddDbContext<ReminderDbContext>(options =>
 builder.Services.AddScoped<IReminderItemRepository, ReminderItemRepository>();
 builder.Services.AddScoped<IAlertRepository, AlertRepository>();
 builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
-builder.Services.AddScoped<IPersonaRepository, PersonaRepository>();
+builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 builder.Services.AddScoped<IGastoRepository, GastoRepository>();
 builder.Services.AddScoped<IProyectoRepository, ProyectoRepository>();
 builder.Services.AddScoped<IEnlaceProyectoRepository, EnlaceProyectoRepository>();
@@ -32,7 +32,7 @@ builder.Services.AddScoped<IRecursoProyectoRepository, RecursoProyectoRepository
 builder.Services.AddScoped<IReminderService, ReminderService>();
 builder.Services.AddScoped<IAlertService, AlertService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
-builder.Services.AddScoped<IPersonaService, PersonaService>();
+builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IGastoService, GastoService>();
 builder.Services.AddScoped<IProyectoService, ProyectoService>();
 builder.Services.AddScoped<IEnlaceProyectoService, EnlaceProyectoService>();
@@ -84,26 +84,25 @@ app.Run();
 static async Task SeedDataAsync(ReminderDbContext db)
 {
     var now = DateTime.UtcNow;
-    
-    // Seed Personas (solo si no existen)
-    if (!await db.Personas.AnyAsync())
+
+    // Seed Usuarios (solo si no existen)
+    if (!await db.Usuarios.AnyAsync())
     {
-        var personas = new[]
+        var usuarios = new[]
         {
-            new JSCHUB.Domain.Entities.Persona { Id = Guid.NewGuid(), Nombre = "Pope", Activo = true },
-            new JSCHUB.Domain.Entities.Persona { Id = Guid.NewGuid(), Nombre = "Javi", Activo = true },
-            new JSCHUB.Domain.Entities.Persona { Id = Guid.NewGuid(), Nombre = "Carlos", Activo = true }
+            new JSCHUB.Domain.Entities.Usuario { Id = Guid.NewGuid(), Nombre = "Pope", Activo = true },
+            new JSCHUB.Domain.Entities.Usuario { Id = Guid.NewGuid(), Nombre = "Javi", Activo = true },
+            new JSCHUB.Domain.Entities.Usuario { Id = Guid.NewGuid(), Nombre = "Carlos", Activo = true }
         };
-        await db.Personas.AddRangeAsync(personas);
+        await db.Usuarios.AddRangeAsync(usuarios);
         await db.SaveChangesAsync();
-        
+
         // Seed Gastos de ejemplo
-        var pope = personas[0];
-        var javi = personas[1];
-        var carlos = personas[2];
+        var pope = usuarios[0];
+        var javi = usuarios[1];
+        var carlos = usuarios[2];
         var today = DateOnly.FromDateTime(DateTime.Now);
-        var currentTime = TimeOnly.FromDateTime(DateTime.Now);
-        
+
         var gastos = new[]
         {
             new JSCHUB.Domain.Entities.Gasto
@@ -116,7 +115,7 @@ static async Task SeedDataAsync(ReminderDbContext db)
                 PagadoPorId = pope.Id,
                 FechaPago = today,
                 HoraPago = new TimeOnly(13, 30),
-                Estado = JSCHUB.Domain.Enums.EstadoGasto.Registrado
+                Estado = JSCHUB.Domain.Enums.EstadoGasto.Pagado
             },
             new JSCHUB.Domain.Entities.Gasto
             {
@@ -128,7 +127,7 @@ static async Task SeedDataAsync(ReminderDbContext db)
                 PagadoPorId = javi.Id,
                 FechaPago = today.AddDays(-3),
                 HoraPago = new TimeOnly(10, 15),
-                Estado = JSCHUB.Domain.Enums.EstadoGasto.Registrado
+                Estado = JSCHUB.Domain.Enums.EstadoGasto.Pagado
             },
             new JSCHUB.Domain.Entities.Gasto
             {
@@ -140,7 +139,7 @@ static async Task SeedDataAsync(ReminderDbContext db)
                 PagadoPorId = carlos.Id,
                 FechaPago = today.AddDays(-7),
                 HoraPago = new TimeOnly(17, 45),
-                Estado = JSCHUB.Domain.Enums.EstadoGasto.Registrado
+                Estado = JSCHUB.Domain.Enums.EstadoGasto.Saldado
             },
             new JSCHUB.Domain.Entities.Gasto
             {
@@ -150,9 +149,9 @@ static async Task SeedDataAsync(ReminderDbContext db)
                 Importe = 28.00m,
                 Moneda = "EUR",
                 PagadoPorId = pope.Id,
-                FechaPago = today.AddDays(-2),
+                FechaPago = today.AddDays(5),
                 HoraPago = new TimeOnly(7, 30),
-                Estado = JSCHUB.Domain.Enums.EstadoGasto.Registrado
+                Estado = JSCHUB.Domain.Enums.EstadoGasto.Previsto
             },
             new JSCHUB.Domain.Entities.Gasto
             {
@@ -164,7 +163,7 @@ static async Task SeedDataAsync(ReminderDbContext db)
                 PagadoPorId = javi.Id,
                 FechaPago = today.AddDays(-1),
                 HoraPago = new TimeOnly(21, 0),
-                Estado = JSCHUB.Domain.Enums.EstadoGasto.Registrado
+                Estado = JSCHUB.Domain.Enums.EstadoGasto.PendienteDevolucion
             }
         };
         await db.Gastos.AddRangeAsync(gastos);

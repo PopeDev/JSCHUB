@@ -101,10 +101,21 @@ public class AlertRepository : IAlertRepository
         var now = DateTime.UtcNow;
         var endDate = now.AddDays(days);
         return await _context.Alerts
-            .CountAsync(x => 
-                x.State != AlertState.Resolved && 
-                x.OccurrenceAt >= now && 
+            .CountAsync(x =>
+                x.State != AlertState.Resolved &&
+                x.OccurrenceAt >= now &&
                 x.OccurrenceAt <= endDate, ct);
+    }
+
+    public async Task<int> CountResolvedTodayAsync(CancellationToken ct = default)
+    {
+        var today = DateTime.UtcNow.Date;
+        var tomorrow = today.AddDays(1);
+        return await _context.Alerts
+            .CountAsync(x =>
+                x.State == AlertState.Resolved &&
+                x.UpdatedAt >= today &&
+                x.UpdatedAt < tomorrow, ct);
     }
 
     public async Task<Alert?> FindExistingAsync(Guid reminderItemId, DateTime occurrenceAt, CancellationToken ct = default)

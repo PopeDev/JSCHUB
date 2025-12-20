@@ -62,6 +62,7 @@ public class ProyectoService : IProyectoService
         if (existeNombre)
         {
             _logger.LogWarning("Intento de crear proyecto con nombre duplicado: {Nombre}", dto.Nombre);
+            throw new InvalidOperationException($"Ya existe un proyecto con el nombre '{dto.Nombre}'");
         }
 
         var proyecto = new Proyecto
@@ -96,6 +97,7 @@ public class ProyectoService : IProyectoService
         if (existeNombre)
         {
             _logger.LogWarning("Intento de actualizar proyecto con nombre duplicado: {Nombre}", dto.Nombre);
+            throw new InvalidOperationException($"Ya existe un proyecto con el nombre '{dto.Nombre}'");
         }
 
         proyecto.Nombre = dto.Nombre.Trim();

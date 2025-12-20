@@ -10,22 +10,22 @@ namespace JSCHUB.Application.Services;
 public class GastoService : IGastoService
 {
     private readonly IGastoRepository _repository;
-    private readonly IPersonaRepository _personaRepository;
+    private readonly IUsuarioRepository _usuarioRepository;
     private readonly ILogger<GastoService> _logger;
 
     public GastoService(
         IGastoRepository repository,
-        IPersonaRepository personaRepository,
+        IUsuarioRepository usuarioRepository,
         ILogger<GastoService> logger)
     {
         _repository = repository;
-        _personaRepository = personaRepository;
+        _usuarioRepository = usuarioRepository;
         _logger = logger;
     }
 
     public async Task<GastoDto?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        var gasto = await _repository.GetByIdWithPersonaAsync(id, ct);
+        var gasto = await _repository.GetByIdWithUsuarioAsync(id, ct);
         return gasto == null ? null : MapToDto(gasto);
     }
 
@@ -64,16 +64,12 @@ public class GastoService : IGastoService
 
     public async Task<GastoDto> CreateAsync(CreateGastoDto dto, CancellationToken ct = default)
     {
-        // Validar importe
-        if (dto.Importe <= 0)
-            throw new ArgumentException("El importe debe ser mayor que 0");
+        // Validar que el usuario existe y está activo
+        var usuario = await _usuarioRepository.GetByIdAsync(dto.PagadoPorId, ct)
+            ?? throw new KeyNotFoundException($"Usuario {dto.PagadoPorId} no encontrado");
 
-        // Validar que la persona existe y está activa
-        var persona = await _personaRepository.GetByIdAsync(dto.PagadoPorId, ct)
-            ?? throw new KeyNotFoundException($"Persona {dto.PagadoPorId} no encontrada");
-        
-        if (!persona.Activo)
-            throw new InvalidOperationException($"La persona {persona.Nombre} no está activa");
+        if (!usuario.Activo)
+            throw new InvalidOperationException($"El usuario {usuario.Nombre} no está activo");
 
         var gasto = new Gasto
         {
@@ -85,33 +81,29 @@ public class GastoService : IGastoService
             PagadoPorId = dto.PagadoPorId,
             FechaPago = dto.FechaPago,
             HoraPago = dto.HoraPago,
-            Estado = EstadoGasto.Registrado
+            Estado = EstadoGasto.Previsto
         };
 
         await _repository.AddAsync(gasto, ct);
-        _logger.LogInformation("Gasto creado: {Id} - {Concepto} - {Importe}{Moneda}", 
+        _logger.LogInformation("Gasto creado: {Id} - {Concepto} - {Importe}{Moneda}",
             gasto.Id, gasto.Concepto, gasto.Importe, gasto.Moneda);
 
         // Cargar relación para el DTO
-        gasto.PagadoPor = persona;
+        gasto.PagadoPor = usuario;
         return MapToDto(gasto);
     }
 
     public async Task<GastoDto> UpdateAsync(Guid id, UpdateGastoDto dto, CancellationToken ct = default)
     {
-        // Validar importe
-        if (dto.Importe <= 0)
-            throw new ArgumentException("El importe debe ser mayor que 0");
-
         var gasto = await _repository.GetByIdAsync(id, ct)
             ?? throw new KeyNotFoundException($"Gasto {id} no encontrado");
 
-        // Validar que la persona existe y está activa
-        var persona = await _personaRepository.GetByIdAsync(dto.PagadoPorId, ct)
-            ?? throw new KeyNotFoundException($"Persona {dto.PagadoPorId} no encontrada");
-        
-        if (!persona.Activo)
-            throw new InvalidOperationException($"La persona {persona.Nombre} no está activa");
+        // Validar que el usuario existe y está activo
+        var usuario = await _usuarioRepository.GetByIdAsync(dto.PagadoPorId, ct)
+            ?? throw new KeyNotFoundException($"Usuario {dto.PagadoPorId} no encontrado");
+
+        if (!usuario.Activo)
+            throw new InvalidOperationException($"El usuario {usuario.Nombre} no está activo");
 
         gasto.Concepto = dto.Concepto;
         gasto.Notas = dto.Notas;
@@ -124,7 +116,7 @@ public class GastoService : IGastoService
 
         await _repository.UpdateAsync(gasto, ct);
 
-        gasto.PagadoPor = persona;
+        gasto.PagadoPor = usuario;
         return MapToDto(gasto);
     }
 
@@ -135,8 +127,17 @@ public class GastoService : IGastoService
 
         gasto.Estado = EstadoGasto.Anulado;
         await _repository.UpdateAsync(gasto, ct);
-        
+
         _logger.LogInformation("Gasto anulado: {Id}", id);
+    }
+
+    public async Task DeleteAsync(Guid id, CancellationToken ct = default)
+    {
+        var gasto = await _repository.GetByIdAsync(id, ct)
+            ?? throw new KeyNotFoundException($"Gasto {id} no encontrado");
+
+        await _repository.DeleteAsync(gasto, ct);
+        _logger.LogInformation("Gasto eliminado: {Id}", id);
     }
 
     private static GastoDto MapToDto(Gasto gasto) => new(

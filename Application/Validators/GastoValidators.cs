@@ -53,9 +53,26 @@ public class UpdateGastoValidator : AbstractValidator<UpdateGastoDto>
     }
 }
 
-public class CreatePersonaValidator : AbstractValidator<CreatePersonaDto>
+public class CreateUsuarioValidator : AbstractValidator<CreateUsuarioDto>
 {
-    public CreatePersonaValidator()
+    public CreateUsuarioValidator()
+    {
+        RuleFor(x => x.Nombre)
+            .NotEmpty().WithMessage("El nombre es obligatorio")
+            .MaximumLength(100).WithMessage("El nombre no puede superar 100 caracteres");
+
+        RuleFor(x => x.Email)
+            .EmailAddress().When(x => !string.IsNullOrEmpty(x.Email))
+            .WithMessage("El email no tiene un formato válido");
+
+        RuleFor(x => x.Telefono)
+            .MaximumLength(20).WithMessage("El teléfono no puede superar 20 caracteres");
+    }
+}
+
+public class UpdateUsuarioValidator : AbstractValidator<UpdateUsuarioDto>
+{
+    public UpdateUsuarioValidator()
     {
         RuleFor(x => x.Nombre)
             .NotEmpty().WithMessage("El nombre es obligatorio")

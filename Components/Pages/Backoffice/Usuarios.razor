@@ -1,20 +1,20 @@
-@page "/backoffice/personas"
+@page "/backoffice/usuarios"
 @using JSCHUB.Application.DTOs
 @using JSCHUB.Application.Interfaces
 @rendermode InteractiveServer
 
-<PageTitle>Personas - JSCHUB</PageTitle>
+<PageTitle>Usuarios - JSCHUB</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
     <div class="d-flex justify-space-between align-center mb-4">
         <MudText Typo="Typo.h4">
             <MudIcon Icon="@Icons.Material.Filled.People" Class="mr-2" />
-            Personas
+            Usuarios
         </MudText>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
                    StartIcon="@Icons.Material.Filled.Add"
-                   Href="/backoffice/personas/new">
-            Nueva Persona
+                   Href="/backoffice/usuarios/new">
+            Nuevo Usuario
         </MudButton>
     </div>
 
@@ -24,13 +24,13 @@
     }
     else
     {
-        <MudTable Items="_personas" Hover="true" Striped="true" Elevation="2">
+        <MudTable Items="_usuarios" Hover="true" Striped="true" Elevation="2">
             <HeaderContent>
                 <MudTh>Nombre</MudTh>
                 <MudTh>Email</MudTh>
                 <MudTh>Teléfono</MudTh>
                 <MudTh>Estado</MudTh>
-                <MudTh Style="width: 150px">Acciones</MudTh>
+                <MudTh Style="width: 180px">Acciones</MudTh>
             </HeaderContent>
             <RowTemplate>
                 <MudTd>
@@ -67,36 +67,56 @@
                     }
                 </MudTd>
                 <MudTd>
-                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit" 
-                                   Href="@($"/backoffice/personas/{context.Id}/edit")"
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit"
+                                   Href="@($"/backoffice/usuarios/{context.Id}/edit")"
                                    Title="Editar" />
                     @if (context.Activo)
                     {
-                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.PersonOff" 
+                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.PersonOff"
                                        Color="Color.Warning" Title="Desactivar"
                                        OnClick="@(() => ToggleActivoAsync(context.Id))" />
                     }
                     else
                     {
-                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.PersonAdd" 
+                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.PersonAdd"
                                        Color="Color.Success" Title="Activar"
                                        OnClick="@(() => ToggleActivoAsync(context.Id))" />
                     }
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Delete"
+                                   Color="Color.Error" Title="Eliminar"
+                                   OnClick="@(() => ConfirmDeleteAsync(context))" />
                 </MudTd>
             </RowTemplate>
             <NoRecordsContent>
-                <MudText Class="pa-4">No hay personas registradas.</MudText>
+                <MudText Class="pa-4">No hay usuarios registrados.</MudText>
             </NoRecordsContent>
         </MudTable>
     }
 </MudContainer>
 
+<MudMessageBox @ref="_deleteConfirmation" Title="Confirmar eliminación" CancelText="Cancelar">
+    <MessageContent>
+        ¿Estás seguro de que deseas eliminar al usuario <strong>@_usuarioToDelete?.Nombre</strong>?
+        <br /><br />
+        <MudAlert Severity="Severity.Warning" Dense="true">
+            Esta acción no se puede deshacer.
+        </MudAlert>
+    </MessageContent>
+    <YesButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete">
+            Eliminar
+        </MudButton>
+    </YesButton>
+</MudMessageBox>
+
 @code {
-    [Inject] private IPersonaService PersonaService { get; set; } = default!;
+    [Inject] private IUsuarioService UsuarioService { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
 
     private bool _loading = true;
-    private List<PersonaDto> _personas = [];
+    private List<UsuarioDto> _usuarios = [];
+    private MudMessageBox _deleteConfirmation = default!;
+    private UsuarioDto? _usuarioToDelete;
 
     protected override async Task OnInitializedAsync()
     {
@@ -108,7 +128,7 @@
         _loading = true;
         try
         {
-            _personas = (await PersonaService.GetAllAsync()).ToList();
+            _usuarios = (await UsuarioService.GetAllAsync()).ToList();
         }
         finally
         {
@@ -118,10 +138,35 @@
 
     private async Task ToggleActivoAsync(Guid id)
     {
-        await PersonaService.ToggleActivoAsync(id);
-        var persona = _personas.First(p => p.Id == id);
-        var estado = persona.Activo ? "desactivada" : "activada";
-        Snackbar.Add($"Persona {estado}", MudBlazor.Severity.Success);
+        await UsuarioService.ToggleActivoAsync(id);
+        var usuario = _usuarios.First(u => u.Id == id);
+        var estado = usuario.Activo ? "desactivado" : "activado";
+        Snackbar.Add($"Usuario {estado}", MudBlazor.Severity.Success);
         await LoadDataAsync();
+    }
+
+    private async Task ConfirmDeleteAsync(UsuarioDto usuario)
+    {
+        _usuarioToDelete = usuario;
+        var result = await _deleteConfirmation.ShowAsync();
+        if (result == true)
+        {
+            await DeleteAsync(usuario.Id);
+        }
+        _usuarioToDelete = null;
+    }
+
+    private async Task DeleteAsync(Guid id)
+    {
+        try
+        {
+            await UsuarioService.DeleteAsync(id);
+            Snackbar.Add("Usuario eliminado", MudBlazor.Severity.Success);
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", MudBlazor.Severity.Error);
+        }
     }
 }

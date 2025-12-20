@@ -53,16 +53,12 @@ public class AlertService : IAlertService
 
     public async Task<AlertStatsDto> GetStatsAsync(CancellationToken ct = default)
     {
-        var today = DateTime.UtcNow.Date;
-        
         var totalOpen = await _alertRepository.CountByStateAsync(AlertState.Open, ct);
         var dueToday = await _alertRepository.CountDueTodayAsync(ct);
         var dueNext7Days = await _alertRepository.CountDueInDaysAsync(7, ct);
         var overdue = await _alertRepository.CountOverdueAsync(ct);
         var snoozed = await _alertRepository.CountByStateAsync(AlertState.Snoozed, ct);
-        
-        // Para ResolvedToday necesitaríamos un método adicional, lo simplificamos
-        var resolvedToday = 0;
+        var resolvedToday = await _alertRepository.CountResolvedTodayAsync(ct);
 
         return new AlertStatsDto(totalOpen, dueToday, dueNext7Days, overdue, snoozed, resolvedToday);
     }
