@@ -27,6 +27,7 @@ builder.Services.AddScoped<IGastoRepository, GastoRepository>();
 builder.Services.AddScoped<IProyectoRepository, ProyectoRepository>();
 builder.Services.AddScoped<IEnlaceProyectoRepository, EnlaceProyectoRepository>();
 builder.Services.AddScoped<IRecursoProyectoRepository, RecursoProyectoRepository>();
+builder.Services.AddScoped<IKanbanRepository, KanbanRepository>();
 
 // Add Services
 builder.Services.AddScoped<IReminderService, ReminderService>();
@@ -37,6 +38,7 @@ builder.Services.AddScoped<IGastoService, GastoService>();
 builder.Services.AddScoped<IProyectoService, ProyectoService>();
 builder.Services.AddScoped<IEnlaceProyectoService, EnlaceProyectoService>();
 builder.Services.AddScoped<IRecursoProyectoService, RecursoProyectoService>();
+builder.Services.AddScoped<IKanbanService, KanbanService>();
 
 // Add Authentication Services (Singleton para mantener sesión global)
 builder.Services.AddSingleton<JSCHUB.Infrastructure.Services.AuthService>();
