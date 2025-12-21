@@ -31,7 +31,7 @@ public class Gasto
     public TimeOnly HoraPago { get; set; }
     
     /// <summary>Estado del gasto</summary>
-    public EstadoGasto Estado { get; set; } = EstadoGasto.Registrado;
+    public EstadoGasto Estado { get; set; } = EstadoGasto.Previsto;
     
     // TODO: Adjuntos - implementar más adelante
     // public string? AdjuntoUrl { get; set; }

@@ -108,19 +108,23 @@
     
     private static Color GetEstadoColor(EstadoGasto estado) => estado switch
     {
-        EstadoGasto.Registrado => Color.Info,
-        EstadoGasto.Saldado => Color.Success,
+        EstadoGasto.Previsto => Color.Info,
+        EstadoGasto.Pendiente => Color.Warning,
+        EstadoGasto.Pagado => Color.Success,
+        EstadoGasto.Saldado => Color.Primary,
+        EstadoGasto.PendienteDevolucion => Color.Secondary,
         EstadoGasto.Anulado => Color.Default,
-        EstadoGasto.PendienteDevolucion => Color.Warning,
         _ => Color.Default
     };
 
     private static string GetEstadoLabel(EstadoGasto estado) => estado switch
     {
-        EstadoGasto.Registrado => "Registrado",
+        EstadoGasto.Previsto => "Previsto",
+        EstadoGasto.Pendiente => "Pendiente",
+        EstadoGasto.Pagado => "Pagado",
         EstadoGasto.Saldado => "Saldado",
+        EstadoGasto.PendienteDevolucion => "Pte. Devolución",
         EstadoGasto.Anulado => "Anulado",
-        EstadoGasto.PendienteDevolucion => "Pendiente Devolución",
         _ => estado.ToString()
     };
 }

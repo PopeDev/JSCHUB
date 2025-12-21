@@ -113,7 +113,7 @@
                                Color="Color.Primary"
                                Size="Size.Small"
                                StartIcon="@Icons.Material.Filled.Add"
-                               OnClick="OpenEnlaceDialog"
+                               OnClick="@(() => OpenEnlaceDialog())"
                                Disabled="@(_proyecto.Estado == EstadoProyecto.Archivado)">
                         Nuevo enlace
                     </MudButton>
@@ -178,7 +178,7 @@
                                Color="Color.Primary"
                                Size="Size.Small"
                                StartIcon="@Icons.Material.Filled.Add"
-                               OnClick="OpenRecursoDialog"
+                               OnClick="@(() => OpenRecursoDialog())"
                                Disabled="@(_proyecto.Estado == EstadoProyecto.Archivado)">
                         Nuevo recurso
                     </MudButton>
@@ -318,7 +318,7 @@
                     <MudTextField T="string" @bind-Value="_recursoNombre" Label="Nombre *" Required="true" RequiredError="El nombre es obligatorio" MaxLength="200" />
                 </MudItem>
                 <MudItem xs="12">
-                    <MudSelect T="TipoRecurso" @bind-Value="_recursoTipo" Label="Tipo" ValueChanged="OnRecursoTipoChanged">
+                    <MudSelect T="TipoRecurso" Value="_recursoTipo" Label="Tipo" ValueChanged="OnRecursoTipoChanged">
                         <MudSelectItem T="TipoRecurso" Value="@(TipoRecurso.Enlace)">Enlace</MudSelectItem>
                         <MudSelectItem T="TipoRecurso" Value="@(TipoRecurso.Nota)">Nota</MudSelectItem>
                         <MudSelectItem T="TipoRecurso" Value="@(TipoRecurso.Referencia)">Referencia</MudSelectItem>

@@ -163,17 +163,8 @@
                     <MudTd>@context.NextOccurrenceAt?.ToString("dd/MM/yyyy")</MudTd>
                     <MudTd>
                         @{
-                            var days = context.NextOccurrenceAt.HasValue
-                                ? (context.NextOccurrenceAt.Value - DateTime.UtcNow).Days
-                                : 0;
-                            var color = days switch
-                            {
-                                < 0 => Color.Error,
-                                0 => Color.Error,
-                                <= 3 => Color.Warning,
-                                <= 7 => Color.Info,
-                                _ => Color.Default
-                            };
+                            var days = GetDaysRemaining(context);
+                            var color = GetReminderColor(days);
                         }
                         <MudChip T="string" Size="Size.Small" Color="@color">
                             @(days < 0 ? $"Hace {-days} días" : days == 0 ? "Hoy" : $"{days} días")
@@ -248,4 +239,20 @@
         Category.Reminder => Color.Info,
         _ => Color.Default
     };
+
+    private static int GetDaysRemaining(ReminderItemDto item)
+    {
+        return item.NextOccurrenceAt.HasValue
+            ? (item.NextOccurrenceAt.Value - DateTime.UtcNow).Days
+            : 0;
+    }
+
+    private static Color GetReminderColor(int days)
+    {
+        if (days < 0) return Color.Error;
+        if (days == 0) return Color.Error;
+        if (days <= 3) return Color.Warning;
+        if (days <= 7) return Color.Info;
+        return Color.Default;
+    }
 }

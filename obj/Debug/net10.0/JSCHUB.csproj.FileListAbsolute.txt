@@ -179,3 +179,5 @@ C:\SOURCE\JSCHub\JSCHUB\obj\Debug\net10.0\refint\JSCHUB.dll
 C:\SOURCE\JSCHub\JSCHUB\obj\Debug\net10.0\JSCHUB.pdb
 C:\SOURCE\JSCHub\JSCHUB\obj\Debug\net10.0\JSCHUB.genruntimeconfig.cache
 C:\SOURCE\JSCHub\JSCHUB\obj\Debug\net10.0\ref\JSCHUB.dll
+C:\SOURCE\JSCHub\JSCHUB\obj\Debug\net10.0\JSCHUB.sourcelink.json
+C:\SOURCE\JSCHub\JSCHUB\obj\Debug\net10.0\staticwebassets.upToDateCheck.txt

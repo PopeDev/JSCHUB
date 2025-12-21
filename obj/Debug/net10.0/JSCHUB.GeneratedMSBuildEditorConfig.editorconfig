@@ -37,6 +37,10 @@ build_property.EnableCodeStyleSeverity =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xBcHAucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/SOURCE/JSCHub/JSCHUB/Components/Pages/Backoffice/Dashboard.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xCYWNrb2ZmaWNlXERhc2hib2FyZC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/SOURCE/JSCHub/JSCHUB/Components/Pages/Backoffice/GastoDetail.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xCYWNrb2ZmaWNlXEdhc3RvRGV0YWlsLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
@@ -53,12 +57,16 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xCYWNrb2ZmaWNlXE1vbml0b3IucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/SOURCE/JSCHub/JSCHUB/Components/Pages/Backoffice/PersonaForm.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xCYWNrb2ZmaWNlXFBlcnNvbmFGb3JtLnJhem9y
+[C:/SOURCE/JSCHub/JSCHUB/Components/Pages/Backoffice/ProyectoDetail.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xCYWNrb2ZmaWNlXFByb3llY3RvRGV0YWlsLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/SOURCE/JSCHub/JSCHUB/Components/Pages/Backoffice/Personas.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xCYWNrb2ZmaWNlXFBlcnNvbmFzLnJhem9y
+[C:/SOURCE/JSCHub/JSCHUB/Components/Pages/Backoffice/ProyectoForm.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xCYWNrb2ZmaWNlXFByb3llY3RvRm9ybS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/SOURCE/JSCHub/JSCHUB/Components/Pages/Backoffice/Proyectos.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xCYWNrb2ZmaWNlXFByb3llY3Rvcy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/SOURCE/JSCHub/JSCHUB/Components/Pages/Backoffice/ReminderDetail.razor]
@@ -71,6 +79,14 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/SOURCE/JSCHub/JSCHUB/Components/Pages/Backoffice/Reminders.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xCYWNrb2ZmaWNlXFJlbWluZGVycy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/SOURCE/JSCHub/JSCHUB/Components/Pages/Backoffice/UsuarioForm.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xCYWNrb2ZmaWNlXFVzdWFyaW9Gb3JtLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/SOURCE/JSCHub/JSCHUB/Components/Pages/Backoffice/Usuarios.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xCYWNrb2ZmaWNlXFVzdWFyaW9zLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/SOURCE/JSCHub/JSCHUB/Components/Pages/Counter.razor]

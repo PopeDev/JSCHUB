@@ -370,10 +370,10 @@ static async Task SeedDataAsync(ReminderDbContext db)
                 Tags = ["impuestos", "iva", "hacienda"],
                 Status = JSCHUB.Domain.Enums.ItemStatus.Active,
                 ScheduleType = JSCHUB.Domain.Enums.ScheduleType.Recurring,
-                DueAt = new DateTime(now.Year, ((now.Month - 1) / 3 + 1) * 3 + 1, 20),
+                DueAt = GetNextQuarterlyDueDate(now),
                 RecurrenceFrequency = JSCHUB.Domain.Enums.RecurrenceFrequency.Quarterly,
                 LeadTimeDays = [15, 7, 3],
-                NextOccurrenceAt = new DateTime(now.Year, ((now.Month - 1) / 3 + 1) * 3 + 1, 20),
+                NextOccurrenceAt = GetNextQuarterlyDueDate(now),
                 Metadata = new Dictionary<string, string>
                 {
                     ["modelo"] = "303",
@@ -409,4 +409,19 @@ static async Task SeedDataAsync(ReminderDbContext db)
         await db.ReminderItems.AddRangeAsync(items);
         await db.SaveChangesAsync();
     }
+}
+
+static DateTime GetNextQuarterlyDueDate(DateTime now)
+{
+    var currentQuarter = (now.Month - 1) / 3 + 1;
+    var targetMonth = currentQuarter * 3 + 1;
+    var targetYear = now.Year;
+    
+    if (targetMonth > 12)
+    {
+        targetMonth = 1;
+        targetYear++;
+    }
+    
+    return new DateTime(targetYear, targetMonth, 20, 0, 0, 0, DateTimeKind.Utc);
 }
