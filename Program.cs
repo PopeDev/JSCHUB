@@ -38,10 +38,10 @@ builder.Services.AddScoped<IProyectoService, ProyectoService>();
 builder.Services.AddScoped<IEnlaceProyectoService, EnlaceProyectoService>();
 builder.Services.AddScoped<IRecursoProyectoService, RecursoProyectoService>();
 
-// Add Authentication Services (Singleton para mantener sesión global)
-builder.Services.AddSingleton<JSCHUB.Infrastructure.Services.AuthService>();
-builder.Services.AddSingleton<IAuthService>(sp => sp.GetRequiredService<JSCHUB.Infrastructure.Services.AuthService>());
-builder.Services.AddSingleton<ICurrentUserService>(sp => sp.GetRequiredService<JSCHUB.Infrastructure.Services.AuthService>());
+// Add Authentication Services (Scoped para aislamiento de sesión por circuito)
+builder.Services.AddScoped<JSCHUB.Infrastructure.Services.AuthService>();
+builder.Services.AddScoped<IAuthService>(sp => sp.GetRequiredService<JSCHUB.Infrastructure.Services.AuthService>());
+builder.Services.AddScoped<ICurrentUserService>(sp => sp.GetRequiredService<JSCHUB.Infrastructure.Services.AuthService>());
 
 // Add Validators
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();

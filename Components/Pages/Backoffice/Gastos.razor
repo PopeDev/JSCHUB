@@ -26,7 +26,7 @@
                 <MudTextField @bind-Value="_searchText" Label="Buscar"
                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
                               Variant="Variant.Outlined" Dense="true"
-                              DebounceInterval="300" OnDebounceIntervalElapsed="@(async (string s) => await LoadDataAsync())" />
+                              DebounceInterval="300" OnDebounceIntervalElapsed="@(async () => await LoadDataAsync())" />
             </MudItem>
             <MudItem xs="6" sm="2">
                 <MudSelect T="Guid?" @bind-Value="_filterPagadoPorId" Label="Pagado por" Clearable="true"

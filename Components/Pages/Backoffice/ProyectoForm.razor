@@ -112,6 +112,7 @@
     [Parameter] public Guid? Id { get; set; }
 
     [Inject] private IProyectoService ProyectoService { get; set; } = default!;
+    [Inject] private ICurrentUserService CurrentUserService { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
 
@@ -189,7 +190,7 @@
                     EnlacePrincipal: _enlacePrincipal,
                     Etiquetas: _etiquetas);
 
-                var created = await ProyectoService.CreateAsync(dto, "usuario"); // TODO: obtener usuario actual
+                var created = await ProyectoService.CreateAsync(dto, CurrentUserService.CurrentUserName ?? "anónimo");
                 Snackbar.Add("Proyecto creado correctamente", Severity.Success);
                 NavigationManager.NavigateTo($"/backoffice/proyectos/{created.Id}");
             }
@@ -202,7 +203,7 @@
                     EnlacePrincipal: _enlacePrincipal,
                     Etiquetas: _etiquetas);
 
-                await ProyectoService.UpdateAsync(Id!.Value, dto, "usuario"); // TODO: obtener usuario actual
+                await ProyectoService.UpdateAsync(Id!.Value, dto, CurrentUserService.CurrentUserName ?? "anónimo");
                 Snackbar.Add("Proyecto actualizado correctamente", Severity.Success);
                 NavigationManager.NavigateTo($"/backoffice/proyectos/{Id}");
             }

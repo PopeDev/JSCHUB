@@ -1,4 +1,6 @@
 ﻿@page "/"
+@using JSCHUB.Application.Interfaces
+@inject ICurrentUserService CurrentUser
 
 <PageTitle>JSCHUB - Backoffice</PageTitle>
 
@@ -9,7 +11,19 @@
     <MudText Typo="Typo.h6" Align="Align.Center" Class="mud-text-secondary mb-8">
         Sistema de Gestión de Renovaciones y Recordatorios
     </MudText>
-    
+
+    @if (!CurrentUser.IsAuthenticated)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4" Variant="Variant.Outlined">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <MudText>Inicia sesión para acceder al sistema</MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/login" StartIcon="@Icons.Material.Filled.Login">
+                    Iniciar sesión
+                </MudButton>
+            </MudStack>
+        </MudAlert>
+    }
+
     <MudGrid Justify="Justify.Center">
         <MudItem xs="12" sm="6" md="4">
             <MudCard Class="mud-height-full" Elevation="3">
@@ -28,13 +42,22 @@
                     <MudText>Visualiza y gestiona todas las alertas activas, próximas y vencidas.</MudText>
                 </MudCardContent>
                 <MudCardActions>
-                    <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/backoffice/monitor">
-                        Ir al Monitor
-                    </MudButton>
+                    @if (CurrentUser.IsAuthenticated)
+                    {
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/backoffice/monitor">
+                            Ir al Monitor
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/login" EndIcon="@Icons.Material.Filled.Lock">
+                            Ir al Monitor
+                        </MudButton>
+                    }
                 </MudCardActions>
             </MudCard>
         </MudItem>
-        
+
         <MudItem xs="12" sm="6" md="4">
             <MudCard Class="mud-height-full" Elevation="3">
                 <MudCardHeader>
@@ -52,13 +75,22 @@
                     <MudText>Crea, edita y gestiona recordatorios y renovaciones con recurrencia.</MudText>
                 </MudCardContent>
                 <MudCardActions>
-                    <MudButton Variant="Variant.Text" Color="Color.Secondary" Href="/backoffice/reminders">
-                        Ver Recordatorios
-                    </MudButton>
+                    @if (CurrentUser.IsAuthenticated)
+                    {
+                        <MudButton Variant="Variant.Text" Color="Color.Secondary" Href="/backoffice/reminders">
+                            Ver Recordatorios
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Text" Color="Color.Secondary" Href="/login" EndIcon="@Icons.Material.Filled.Lock">
+                            Ver Recordatorios
+                        </MudButton>
+                    }
                 </MudCardActions>
             </MudCard>
         </MudItem>
-        
+
         <MudItem xs="12" sm="6" md="4">
             <MudCard Class="mud-height-full" Elevation="3">
                 <MudCardHeader>
@@ -76,9 +108,18 @@
                     <MudText>Añade un nuevo recordatorio o renovación con programación flexible.</MudText>
                 </MudCardContent>
                 <MudCardActions>
-                    <MudButton Variant="Variant.Text" Color="Color.Tertiary" Href="/backoffice/reminders/new">
-                        Crear Nuevo
-                    </MudButton>
+                    @if (CurrentUser.IsAuthenticated)
+                    {
+                        <MudButton Variant="Variant.Text" Color="Color.Tertiary" Href="/backoffice/reminders/new">
+                            Crear Nuevo
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Text" Color="Color.Tertiary" Href="/login" EndIcon="@Icons.Material.Filled.Lock">
+                            Crear Nuevo
+                        </MudButton>
+                    }
                 </MudCardActions>
             </MudCard>
         </MudItem>
