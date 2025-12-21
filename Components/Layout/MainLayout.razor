@@ -74,10 +74,13 @@
         Navigation.LocationChanged += OnLocationChanged;
     }
 
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    private async void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
-        CheckAuthentication();
-        StateHasChanged();
+        await InvokeAsync(() =>
+        {
+            CheckAuthentication();
+            StateHasChanged();
+        });
     }
 
     private void CheckAuthentication()

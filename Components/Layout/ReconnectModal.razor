@@ -7,25 +7,28 @@
             <div></div>
         </div>
         <p class="components-reconnect-first-attempt-visible">
-            Rejoining the server...
+            Reconectando con el servidor...
         </p>
         <p class="components-reconnect-repeated-attempt-visible">
-            Rejoin failed... trying again in <span id="components-seconds-to-next-attempt"></span> seconds.
+            Reconexión fallida... reintentando en <span id="components-seconds-to-next-attempt"></span> segundos.
         </p>
         <p class="components-reconnect-failed-visible">
-            Failed to rejoin.<br />Please retry or reload the page.
+            No se pudo reconectar.<br />La sesión puede haber expirado. Por favor, recarga la página para continuar.
         </p>
-        <button id="components-reconnect-button" class="components-reconnect-failed-visible">
-            Retry
+        <button id="components-reconnect-button" class="components-reconnect-failed-visible" onclick="location.reload()">
+            Recargar página
         </button>
         <p class="components-pause-visible">
-            The session has been paused by the server.
+            La sesión ha sido pausada por el servidor.
         </p>
         <button id="components-resume-button" class="components-pause-visible">
-            Resume
+            Reanudar
         </button>
         <p class="components-resume-failed-visible">
-            Failed to resume the session.<br />Please reload the page.
+            No se pudo reanudar la sesión.<br />Tu sesión puede haber expirado. Por favor, recarga la página.
         </p>
+        <button class="components-resume-failed-visible" onclick="location.reload()">
+            Recargar página
+        </button>
     </div>
 </dialog>

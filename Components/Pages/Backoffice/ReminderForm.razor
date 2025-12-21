@@ -59,7 +59,9 @@
                     </MudItem>
                     <MudItem xs="12" sm="6">
                         <MudDatePicker @bind-Date="_dueAt" Label="@(_scheduleType == ScheduleType.OneTime ? "Fecha de vencimiento" : "Primera ocurrencia")"
-                                       Variant="Variant.Outlined" />
+                                       Variant="Variant.Outlined"
+                                       Required="true"
+                                       RequiredError="La fecha es obligatoria" />
                     </MudItem>
                     
                     @if (_scheduleType == ScheduleType.Recurring)

@@ -28,7 +28,9 @@
                 <MudGrid>
                     <MudItem xs="8">
                         <MudNumericField @bind-Value="_importe" Label="Importe" Required="true"
+                                         RequiredError="El importe es obligatorio"
                                          Min="0.01m" Format="N2"
+                                         Validation="@(new Func<decimal, string?>(v => v <= 0 ? "El importe debe ser mayor que 0" : null))"
                                          Adornment="Adornment.End" AdornmentText="@_moneda"
                                          Class="mb-3" />
                     </MudItem>
@@ -156,12 +158,6 @@
     {
         await _form.Validate();
         if (!_formValid) return;
-
-        if (_importe <= 0)
-        {
-            Snackbar.Add("El importe debe ser mayor que 0", MudBlazor.Severity.Error);
-            return;
-        }
 
         _saving = true;
         try

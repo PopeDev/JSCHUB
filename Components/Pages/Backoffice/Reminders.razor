@@ -30,7 +30,8 @@
             </MudItem>
             <MudItem xs="6" sm="2">
                 <MudSelect T="Category?" @bind-Value="_filterCategory" Label="Categoría" Clearable="true"
-                           Variant="Variant.Outlined" Dense="true">
+                           Variant="Variant.Outlined" Dense="true"
+                           ValueChanged="@(async (Category? c) => { _filterCategory = c; await LoadDataAsync(); })">
                     <MudSelectItem Value="@((Category?)Category.Renewal)">Renovación</MudSelectItem>
                     <MudSelectItem Value="@((Category?)Category.Reminder)">Recordatorio</MudSelectItem>
                     <MudSelectItem Value="@((Category?)Category.Other)">Otro</MudSelectItem>
@@ -38,7 +39,8 @@
             </MudItem>
             <MudItem xs="6" sm="2">
                 <MudSelect T="ItemStatus?" @bind-Value="_filterStatus" Label="Estado" Clearable="true"
-                           Variant="Variant.Outlined" Dense="true">
+                           Variant="Variant.Outlined" Dense="true"
+                           ValueChanged="@(async (ItemStatus? s) => { _filterStatus = s; await LoadDataAsync(); })">
                     <MudSelectItem Value="@((ItemStatus?)ItemStatus.Active)">Activo</MudSelectItem>
                     <MudSelectItem Value="@((ItemStatus?)ItemStatus.Paused)">Pausado</MudSelectItem>
                     <MudSelectItem Value="@((ItemStatus?)ItemStatus.Archived)">Archivado</MudSelectItem>

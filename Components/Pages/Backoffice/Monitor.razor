@@ -124,16 +124,19 @@
                                 <MudItem xs="12" md="4" Class="d-flex align-center justify-end gap-2">
                                     @if (alert.State == AlertState.Open)
                                     {
-                                        <MudButton Size="Size.Small" Variant="Variant.Outlined" 
+                                        <MudButton Size="Size.Small" Variant="Variant.Outlined"
+                                                   Disabled="@(_processingAlerts.Contains(alert.Id))"
                                                    OnClick="@(() => AcknowledgeAsync(alert.Id))">
                                             Reconocer
                                         </MudButton>
                                     }
-                                    <MudButton Size="Size.Small" Variant="Variant.Outlined" 
+                                    <MudButton Size="Size.Small" Variant="Variant.Outlined"
+                                               Disabled="@(_processingAlerts.Contains(alert.Id))"
                                                OnClick="@(() => OpenSnoozeDialog(alert))">
                                         Posponer
                                     </MudButton>
                                     <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Success"
+                                               Disabled="@(_processingAlerts.Contains(alert.Id))"
                                                OnClick="@(() => CompleteAsync(alert))">
                                         Completar
                                     </MudButton>
@@ -150,7 +153,7 @@
 </MudContainer>
 
 <!-- Snooze Dialog -->
-<MudDialog @bind-Visible="_snoozeDialogVisible">
+<MudDialog @bind-Visible="_snoozeDialogVisible" Options="new DialogOptions { CloseOnEscapeKey = false, BackdropClick = false }">
     <TitleContent>
         <MudText Typo="Typo.h6">Posponer Alerta</MudText>
     </TitleContent>
@@ -177,6 +180,7 @@
     private bool _snoozeDialogVisible;
     private DateTime? _snoozeDate = DateTime.Today.AddDays(1);
     private AlertDto? _selectedAlert;
+    private HashSet<Guid> _processingAlerts = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -202,9 +206,18 @@
 
     private async Task AcknowledgeAsync(Guid alertId)
     {
-        await AlertService.AcknowledgeAsync(alertId);
-        Snackbar.Add("Alerta reconocida", MudBlazor.Severity.Info);
-        await LoadDataAsync();
+        if (_processingAlerts.Contains(alertId)) return;
+        _processingAlerts.Add(alertId);
+        try
+        {
+            await AlertService.AcknowledgeAsync(alertId);
+            Snackbar.Add("Alerta reconocida", MudBlazor.Severity.Info);
+            await LoadDataAsync();
+        }
+        finally
+        {
+            _processingAlerts.Remove(alertId);
+        }
     }
 
     private void OpenSnoozeDialog(AlertDto alert)
@@ -227,9 +240,18 @@
 
     private async Task CompleteAsync(AlertDto alert)
     {
-        await ReminderService.CompleteAsync(alert.ReminderItemId);
-        Snackbar.Add("Recordatorio completado", MudBlazor.Severity.Success);
-        await LoadDataAsync();
+        if (_processingAlerts.Contains(alert.Id)) return;
+        _processingAlerts.Add(alert.Id);
+        try
+        {
+            await ReminderService.CompleteAsync(alert.ReminderItemId);
+            Snackbar.Add("Recordatorio completado", MudBlazor.Severity.Success);
+            await LoadDataAsync();
+        }
+        finally
+        {
+            _processingAlerts.Remove(alert.Id);
+        }
     }
 
     private static string GetCardStyle(AlertSeverity severity) => severity switch

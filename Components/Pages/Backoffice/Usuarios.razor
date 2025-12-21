@@ -138,10 +138,10 @@
 
     private async Task ToggleActivoAsync(Guid id)
     {
-        await UsuarioService.ToggleActivoAsync(id);
         var usuario = _usuarios.First(u => u.Id == id);
-        var estado = usuario.Activo ? "desactivado" : "activado";
-        Snackbar.Add($"Usuario {estado}", MudBlazor.Severity.Success);
+        var nuevoEstado = usuario.Activo ? "desactivado" : "activado";
+        await UsuarioService.ToggleActivoAsync(id);
+        Snackbar.Add($"Usuario {nuevoEstado}", MudBlazor.Severity.Success);
         await LoadDataAsync();
     }
 

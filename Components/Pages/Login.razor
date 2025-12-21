@@ -74,11 +74,12 @@
     private bool _showPassword;
     private bool _loading;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         // Si ya está autenticado, redirigir al backoffice
         if (CurrentUser.IsAuthenticated)
         {
+            await Task.Yield(); // Permitir que el render inicial complete
             Navigation.NavigateTo("/backoffice/monitor");
         }
     }
