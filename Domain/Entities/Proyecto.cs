@@ -25,6 +25,12 @@ public class Proyecto
     public EstadoProyecto Estado { get; set; } = EstadoProyecto.Activo;
 
     /// <summary>
+    /// Indica si es el Proyecto General (Matriz). Solo puede existir uno.
+    /// El Proyecto General es inmutable y no puede eliminarse ni archivarse.
+    /// </summary>
+    public bool EsGeneral { get; set; } = false;
+
+    /// <summary>
     /// Enlace principal destacado (repo, documentación, panel cliente)
     /// </summary>
     public string? EnlacePrincipal { get; set; }
@@ -43,6 +49,11 @@ public class Proyecto
     // Navegación
     public ICollection<EnlaceProyecto> Enlaces { get; set; } = new List<EnlaceProyecto>();
     public ICollection<RecursoProyecto> Recursos { get; set; } = new List<RecursoProyecto>();
+
+    // Relaciones N:M
+    public ICollection<UsuarioProyecto> UsuariosProyecto { get; set; } = new List<UsuarioProyecto>();
+    public ICollection<GastoProyecto> GastosProyecto { get; set; } = new List<GastoProyecto>();
+    public ICollection<ReminderItemProyecto> ReminderItemsProyecto { get; set; } = new List<ReminderItemProyecto>();
 
     /// <summary>
     /// Obtiene las etiquetas como lista
@@ -73,10 +84,14 @@ public class Proyecto
     }
 
     /// <summary>
-    /// Archiva el proyecto
+    /// Archiva el proyecto. El Proyecto General no puede archivarse.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Si se intenta archivar el Proyecto General</exception>
     public void Archivar(string usuario)
     {
+        if (EsGeneral)
+            throw new InvalidOperationException("El Proyecto General no puede archivarse.");
+
         Estado = EstadoProyecto.Archivado;
         ModificadoPor = usuario;
         ModificadoEl = DateTime.UtcNow;

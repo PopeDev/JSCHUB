@@ -87,6 +87,27 @@ static async Task SeedDataAsync(ReminderDbContext db)
 {
     var now = DateTime.UtcNow;
 
+    // ===== PROYECTO GENERAL (siempre debe existir) =====
+    var proyectoGeneral = await db.Proyectos.FirstOrDefaultAsync(p => p.EsGeneral);
+    if (proyectoGeneral == null)
+    {
+        proyectoGeneral = new JSCHUB.Domain.Entities.Proyecto
+        {
+            Id = Guid.NewGuid(),
+            Nombre = "General",
+            Descripcion = "Proyecto General (Matriz). Los gastos y recordatorios marcados como 'General' pertenecen a este proyecto y aplican a toda la empresa.",
+            Estado = JSCHUB.Domain.Enums.EstadoProyecto.Activo,
+            EsGeneral = true,
+            Etiquetas = "matriz, general, empresa",
+            CreadoPor = "sistema",
+            CreadoEl = now,
+            ModificadoPor = "sistema",
+            ModificadoEl = now
+        };
+        await db.Proyectos.AddAsync(proyectoGeneral);
+        await db.SaveChangesAsync();
+    }
+
     // Seed Usuarios (solo si no existen)
     if (!await db.Usuarios.AnyAsync())
     {
@@ -170,10 +191,30 @@ static async Task SeedDataAsync(ReminderDbContext db)
         };
         await db.Gastos.AddRangeAsync(gastos);
         await db.SaveChangesAsync();
+
+        // Asignar todos los usuarios al Proyecto General con rol Admin
+        var asignacionesGeneral = usuarios.Select(u => new JSCHUB.Domain.Entities.UsuarioProyecto
+        {
+            UsuarioId = u.Id,
+            ProyectoId = proyectoGeneral.Id,
+            Rol = JSCHUB.Domain.Enums.RolProyecto.Admin,
+            FechaAsignacion = now,
+            AsignadoPor = "sistema"
+        }).ToArray();
+        await db.UsuariosProyectos.AddRangeAsync(asignacionesGeneral);
+
+        // Asociar todos los gastos al Proyecto General (son gastos "generales")
+        var gastosProyecto = gastos.Select(g => new JSCHUB.Domain.Entities.GastoProyecto
+        {
+            GastoId = g.Id,
+            ProyectoId = proyectoGeneral.Id
+        }).ToArray();
+        await db.GastosProyectos.AddRangeAsync(gastosProyecto);
+        await db.SaveChangesAsync();
     }
 
-    // Seed Proyectos (solo si no existen)
-    if (!await db.Proyectos.AnyAsync())
+    // Seed Proyectos de ejemplo (solo si no hay más proyectos aparte del General)
+    if (await db.Proyectos.CountAsync() <= 1)
     {
         var proyecto = new JSCHUB.Domain.Entities.Proyecto
         {
@@ -312,6 +353,22 @@ static async Task SeedDataAsync(ReminderDbContext db)
         };
         await db.RecursosProyecto.AddRangeAsync(recursos);
         await db.SaveChangesAsync();
+
+        // Asignar usuarios existentes al proyecto de ejemplo
+        var usuariosExistentes = await db.Usuarios.ToListAsync();
+        if (usuariosExistentes.Any())
+        {
+            var asignacionesProyecto = usuariosExistentes.Select((u, index) => new JSCHUB.Domain.Entities.UsuarioProyecto
+            {
+                UsuarioId = u.Id,
+                ProyectoId = proyecto.Id,
+                Rol = index == 0 ? JSCHUB.Domain.Enums.RolProyecto.Admin : JSCHUB.Domain.Enums.RolProyecto.Miembro,
+                FechaAsignacion = now,
+                AsignadoPor = "sistema"
+            }).ToArray();
+            await db.UsuariosProyectos.AddRangeAsync(asignacionesProyecto);
+            await db.SaveChangesAsync();
+        }
     }
 
     // Seed ReminderItems (solo si no existen)
@@ -409,6 +466,15 @@ static async Task SeedDataAsync(ReminderDbContext db)
         };
 
         await db.ReminderItems.AddRangeAsync(items);
+        await db.SaveChangesAsync();
+
+        // Asociar todos los recordatorios al Proyecto General (son recordatorios "generales")
+        var reminderItemsProyecto = items.Select(r => new JSCHUB.Domain.Entities.ReminderItemProyecto
+        {
+            ReminderItemId = r.Id,
+            ProyectoId = proyectoGeneral.Id
+        }).ToArray();
+        await db.ReminderItemsProyectos.AddRangeAsync(reminderItemsProyecto);
         await db.SaveChangesAsync();
     }
 }

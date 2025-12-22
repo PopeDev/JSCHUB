@@ -37,8 +37,7 @@ public class ReminderItemConfiguration : IEntityTypeConfiguration<ReminderItem>
             .HasConversion<string>()
             .HasMaxLength(50);
         
-        builder.Property(x => x.Assignee)
-            .HasMaxLength(100);
+        // AsignadoAId se configura en la relación
         
         builder.Property(x => x.Timezone)
             .HasMaxLength(100)
@@ -85,12 +84,18 @@ public class ReminderItemConfiguration : IEntityTypeConfiguration<ReminderItem>
         builder.HasIndex(x => x.Status);
         builder.HasIndex(x => x.Category);
         builder.HasIndex(x => x.NextOccurrenceAt);
-        builder.HasIndex(x => x.Assignee);
+        builder.HasIndex(x => x.AsignadoAId);
 
-        // Relationship
+        // Relación con Alerts
         builder.HasMany(x => x.Alerts)
             .WithOne(x => x.ReminderItem)
             .HasForeignKey(x => x.ReminderItemId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Relación con Usuario (AsignadoA)
+        builder.HasOne(x => x.AsignadoA)
+            .WithMany(x => x.ReminderItemsAsignados)
+            .HasForeignKey(x => x.AsignadoAId)
+            .OnDelete(DeleteBehavior.SetNull); // Si se elimina el usuario, se quita la asignación
     }
 }

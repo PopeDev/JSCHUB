@@ -21,4 +21,8 @@ public class Usuario
 
     // Navegación
     public ICollection<Gasto> Gastos { get; set; } = [];
+    public ICollection<ReminderItem> ReminderItemsAsignados { get; set; } = [];
+
+    // Relaciones N:M
+    public ICollection<UsuarioProyecto> UsuarioProyectos { get; set; } = [];
 }

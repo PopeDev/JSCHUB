@@ -38,4 +38,7 @@ public class Gasto
     
     // Navegación
     public Usuario PagadoPor { get; set; } = null!;
+
+    // Relaciones N:M
+    public ICollection<GastoProyecto> GastosProyecto { get; set; } = [];
 }
