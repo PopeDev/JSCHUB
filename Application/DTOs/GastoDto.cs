@@ -3,6 +3,15 @@ using JSCHUB.Domain.Enums;
 namespace JSCHUB.Application.DTOs;
 
 /// <summary>
+/// DTO simplificado de proyecto para mostrar en gastos/recordatorios
+/// </summary>
+public record ProyectoSimpleDto(
+    Guid Id,
+    string Nombre,
+    bool EsGeneral
+);
+
+/// <summary>
 /// DTO para lectura de Gasto
 /// </summary>
 public record GastoDto(
@@ -15,7 +24,9 @@ public record GastoDto(
     string PagadoPorNombre,
     DateOnly FechaPago,
     TimeOnly HoraPago,
-    EstadoGasto Estado
+    EstadoGasto Estado,
+    List<ProyectoSimpleDto> Proyectos,
+    bool EsGeneral // true si solo está asociado al Proyecto General
 );
 
 /// <summary>
@@ -28,7 +39,8 @@ public record CreateGastoDto(
     string? Moneda,
     Guid PagadoPorId,
     DateOnly FechaPago,
-    TimeOnly HoraPago
+    TimeOnly HoraPago,
+    List<Guid>? ProyectoIds // Si es null o vacío, se asocia al Proyecto General
 );
 
 /// <summary>
@@ -42,5 +54,6 @@ public record UpdateGastoDto(
     Guid PagadoPorId,
     DateOnly FechaPago,
     TimeOnly HoraPago,
-    EstadoGasto Estado
+    EstadoGasto Estado,
+    List<Guid>? ProyectoIds // Si es null o vacío, se asocia al Proyecto General
 );

@@ -29,6 +29,10 @@ public class ProyectoConfiguration : IEntityTypeConfiguration<Proyecto>
         builder.Property(x => x.Etiquetas)
             .HasMaxLength(500);
 
+        builder.Property(x => x.EsGeneral)
+            .HasDefaultValue(false)
+            .IsRequired();
+
         // Auditoría
         builder.Property(x => x.CreadoPor)
             .HasMaxLength(100)
@@ -48,6 +52,14 @@ public class ProyectoConfiguration : IEntityTypeConfiguration<Proyecto>
         builder.HasIndex(x => x.Nombre);
         builder.HasIndex(x => x.Estado);
         builder.HasIndex(x => x.ModificadoEl);
+        builder.HasIndex(x => x.EsGeneral);
+
+        // Índice único filtrado para garantizar solo un Proyecto General
+        // Nota: En PostgreSQL esto se logra con un índice único parcial
+        builder.HasIndex(x => x.EsGeneral)
+            .HasFilter("\"EsGeneral\" = true")
+            .IsUnique()
+            .HasDatabaseName("IX_proyectos_EsGeneral_Unique");
 
         // Relaciones
         builder.HasMany(x => x.Enlaces)

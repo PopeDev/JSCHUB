@@ -65,6 +65,23 @@
                 <MudTextField @bind-Value="_notas" Label="Notas" Lines="3"
                               MaxLength="1000" Class="mb-3" />
 
+                <MudSelect T="Guid" @bind-SelectedValues="_selectedProyectoIds" Label="Proyectos"
+                           MultiSelection="true" Class="mb-3" Variant="Variant.Outlined"
+                           MultiSelectionTextFunc="@(ids => GetProyectosSeleccionadosText(ids))">
+                    @foreach (var proyecto in _proyectosUsuario)
+                    {
+                        <MudSelectItem Value="@proyecto.Id">
+                            @(proyecto.EsGeneral ? "🌐 General" : proyecto.Nombre)
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+                @if (_proyectoGeneralId.HasValue && _selectedProyectoIds.Contains(_proyectoGeneralId.Value) && _selectedProyectoIds.Count() > 1)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">
+                        Si selecciona "General", no puede seleccionar otros proyectos.
+                    </MudAlert>
+                }
+
                 <MudSelect T="EstadoGasto" @bind-Value="_estado" Label="Estado" Class="mb-3">
                     <MudSelectItem Value="@EstadoGasto.Previsto">Previsto</MudSelectItem>
                     <MudSelectItem Value="@EstadoGasto.Pendiente">Pendiente</MudSelectItem>
@@ -97,6 +114,7 @@
 
     [Inject] private IGastoService GastoService { get; set; } = default!;
     [Inject] private IUsuarioService UsuarioService { get; set; } = default!;
+    [Inject] private IUsuarioProyectoService UsuarioProyectoService { get; set; } = default!;
     [Inject] private ICurrentUserService CurrentUserService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
@@ -108,6 +126,9 @@
     private bool _isNew => !Id.HasValue;
 
     private List<UsuarioDto> _usuarios = [];
+    private List<ProyectoAsignadoDto> _proyectosUsuario = [];
+    private Guid _usuarioActualId;
+    private Guid? _proyectoGeneralId;
 
     private string _concepto = string.Empty;
     private string? _notas;
@@ -117,10 +138,28 @@
     private DateTime? _fechaPago = DateTime.Today;
     private TimeSpan? _horaPago = DateTime.Now.TimeOfDay;
     private EstadoGasto _estado = EstadoGasto.Previsto;
+    private IEnumerable<Guid> _selectedProyectoIds = [];
 
     protected override async Task OnInitializedAsync()
     {
         _usuarios = (await UsuarioService.GetActivosAsync()).ToList();
+
+        // Obtener usuario actual y sus proyectos
+        var currentUserName = CurrentUserService.CurrentUserName;
+        if (!string.IsNullOrEmpty(currentUserName))
+        {
+            var usuario = await UsuarioService.GetByNombreAsync(currentUserName);
+            if (usuario != null)
+            {
+                _usuarioActualId = usuario.Id;
+                _proyectosUsuario = (await UsuarioProyectoService.GetProyectosDelUsuarioAsync(_usuarioActualId))
+                    .Where(p => p.Rol != Domain.Enums.RolProyecto.Viewer)
+                    .ToList();
+
+                var proyectoGeneral = await UsuarioProyectoService.GetProyectoGeneralAsync();
+                _proyectoGeneralId = proyectoGeneral?.Id;
+            }
+        }
 
         if (!_isNew)
         {
@@ -140,6 +179,7 @@
             _fechaPago = gasto.FechaPago.ToDateTime(TimeOnly.MinValue);
             _horaPago = gasto.HoraPago.ToTimeSpan();
             _estado = gasto.Estado;
+            _selectedProyectoIds = gasto.Proyectos.Select(p => p.Id).ToList();
         }
         else if (_usuarios.Any())
         {
@@ -149,6 +189,12 @@
                 string.Equals(u.Nombre, currentUser, StringComparison.OrdinalIgnoreCase));
 
             _pagadoPorId = usuarioActual?.Id ?? _usuarios.First().Id;
+
+            // Por defecto, seleccionar Proyecto General si el usuario tiene acceso
+            if (_proyectoGeneralId.HasValue && _proyectosUsuario.Any(p => p.EsGeneral))
+            {
+                _selectedProyectoIds = [_proyectoGeneralId.Value];
+            }
         }
 
         _loading = false;
@@ -159,30 +205,42 @@
         await _form.Validate();
         if (!_formValid) return;
 
+        // Validar que no se mezcle General con otros proyectos
+        if (_proyectoGeneralId.HasValue && _selectedProyectoIds.Contains(_proyectoGeneralId.Value) && _selectedProyectoIds.Count() > 1)
+        {
+            Snackbar.Add("No puede mezclar 'General' con otros proyectos", MudBlazor.Severity.Error);
+            return;
+        }
+
         _saving = true;
         try
         {
             var fechaPago = DateOnly.FromDateTime(_fechaPago!.Value);
             var horaPago = TimeOnly.FromTimeSpan(_horaPago!.Value);
+            var proyectoIds = _selectedProyectoIds.Any() ? _selectedProyectoIds.ToList() : null;
 
             if (_isNew)
             {
                 var dto = new CreateGastoDto(
                     _concepto, _notas, _importe, _moneda,
-                    _pagadoPorId, fechaPago, horaPago);
-                await GastoService.CreateAsync(dto);
+                    _pagadoPorId, fechaPago, horaPago, proyectoIds);
+                await GastoService.CreateAsync(_usuarioActualId, dto);
                 Snackbar.Add("Gasto creado", MudBlazor.Severity.Success);
             }
             else
             {
                 var dto = new UpdateGastoDto(
                     _concepto, _notas, _importe, _moneda,
-                    _pagadoPorId, fechaPago, horaPago, _estado);
-                await GastoService.UpdateAsync(Id!.Value, dto);
+                    _pagadoPorId, fechaPago, horaPago, _estado, proyectoIds);
+                await GastoService.UpdateAsync(_usuarioActualId, Id!.Value, dto);
                 Snackbar.Add("Gasto actualizado", MudBlazor.Severity.Success);
             }
 
             Navigation.NavigateTo("/backoffice/gastos");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Snackbar.Add(ex.Message, MudBlazor.Severity.Error);
         }
         catch (Exception ex)
         {
@@ -192,5 +250,17 @@
         {
             _saving = false;
         }
+    }
+
+    private string GetProyectosSeleccionadosText(List<string> ids)
+    {
+        if (!ids.Any()) return "Sin proyectos (se asignará a General)";
+
+        var nombres = _proyectosUsuario
+            .Where(p => ids.Contains(p.Id.ToString()))
+            .Select(p => p.EsGeneral ? "General" : p.Nombre)
+            .ToList();
+
+        return string.Join(", ", nombres);
     }
 }

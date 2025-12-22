@@ -23,8 +23,8 @@ public class ReminderItem
     /// <summary>Etiquetas para filtrado</summary>
     public List<string> Tags { get; set; } = [];
     
-    /// <summary>Responsable asignado</summary>
-    public string? Assignee { get; set; }
+    /// <summary>Id del usuario responsable asignado (debe tener acceso a los proyectos del recordatorio)</summary>
+    public Guid? AsignadoAId { get; set; }
     
     /// <summary>Estado del item: Active, Paused, Archived</summary>
     public ItemStatus Status { get; set; } = ItemStatus.Active;
@@ -64,6 +64,10 @@ public class ReminderItem
     
     // Navegación
     public ICollection<Alert> Alerts { get; set; } = [];
+    public Usuario? AsignadoA { get; set; }
+
+    // Relaciones N:M
+    public ICollection<ReminderItemProyecto> ReminderItemsProyecto { get; set; } = [];
     
     /// <summary>
     /// Calcula la próxima ocurrencia basándose en la frecuencia de recurrencia

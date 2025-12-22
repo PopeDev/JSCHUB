@@ -11,7 +11,8 @@ public record ReminderItemDto(
     string? Description,
     Category Category,
     List<string> Tags,
-    string? Assignee,
+    Guid? AsignadoAId,
+    string? AsignadoANombre,
     ItemStatus Status,
     ScheduleType ScheduleType,
     DateTime? DueAt,
@@ -24,7 +25,9 @@ public record ReminderItemDto(
     Dictionary<string, string> Metadata,
     DateTime CreatedAt,
     DateTime UpdatedAt,
-    int OpenAlertsCount
+    int OpenAlertsCount,
+    List<ProyectoSimpleDto> Proyectos,
+    bool EsGeneral // true si solo está asociado al Proyecto General
 );
 
 /// <summary>
@@ -35,14 +38,15 @@ public record CreateReminderItemDto(
     string? Description,
     Category Category,
     List<string>? Tags,
-    string? Assignee,
+    Guid? AsignadoAId, // FK al Usuario (debe tener acceso a los proyectos)
     ScheduleType ScheduleType,
     DateTime? DueAt,
     RecurrenceFrequency? RecurrenceFrequency,
     int? CustomIntervalDays,
     string? Timezone,
     List<int>? LeadTimeDays,
-    Dictionary<string, string>? Metadata
+    Dictionary<string, string>? Metadata,
+    List<Guid>? ProyectoIds // Si es null o vacío, se asocia al Proyecto General
 );
 
 /// <summary>
@@ -53,7 +57,7 @@ public record UpdateReminderItemDto(
     string? Description,
     Category Category,
     List<string>? Tags,
-    string? Assignee,
+    Guid? AsignadoAId, // FK al Usuario (debe tener acceso a los proyectos)
     ItemStatus Status,
     ScheduleType ScheduleType,
     DateTime? DueAt,
@@ -61,7 +65,8 @@ public record UpdateReminderItemDto(
     int? CustomIntervalDays,
     string? Timezone,
     List<int>? LeadTimeDays,
-    Dictionary<string, string>? Metadata
+    Dictionary<string, string>? Metadata,
+    List<Guid>? ProyectoIds // Si es null o vacío, se asocia al Proyecto General
 );
 
 /// <summary>

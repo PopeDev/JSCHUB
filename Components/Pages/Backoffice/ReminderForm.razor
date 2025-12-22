@@ -24,7 +24,7 @@
                 <MudGrid>
                     <!-- Basic Info -->
                     <MudItem xs="12">
-                        <MudTextField @bind-Value="_title" Label="Título" Required="true" 
+                        <MudTextField @bind-Value="_title" Label="Título" Required="true"
                                       RequiredError="El título es requerido"
                                       Variant="Variant.Outlined" />
                     </MudItem>
@@ -41,8 +41,43 @@
                         </MudSelect>
                     </MudItem>
                     <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_assignee" Label="Responsable"
-                                      Variant="Variant.Outlined" />
+                        <MudSelect T="Guid?" @bind-Value="_asignadoAId" Label="Asignado a" Clearable="true"
+                                   Variant="Variant.Outlined">
+                            @foreach (var usuario in _usuariosDisponibles)
+                            {
+                                <MudSelectItem Value="@((Guid?)usuario.Id)">@usuario.Nombre</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+
+                    <!-- Proyectos -->
+                    <MudItem xs="12">
+                        <MudDivider Class="my-2" />
+                        <MudText Typo="Typo.h6" Class="mb-2">Proyectos</MudText>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudSelect T="Guid" @bind-SelectedValues="_selectedProyectoIds" Label="Proyectos"
+                                   MultiSelection="true" Variant="Variant.Outlined"
+                                   MultiSelectionTextFunc="@(ids => GetProyectosSeleccionadosText(ids))">
+                            @foreach (var proyecto in _proyectosUsuario)
+                            {
+                                <MudSelectItem Value="@proyecto.Id">
+                                    @(proyecto.EsGeneral ? "🌐 General" : proyecto.Nombre)
+                                </MudSelectItem>
+                            }
+                        </MudSelect>
+                        @if (_proyectoGeneralId.HasValue && _selectedProyectoIds.Contains(_proyectoGeneralId.Value) && _selectedProyectoIds.Count() > 1)
+                        {
+                            <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+                                Si selecciona "General", no puede seleccionar otros proyectos.
+                            </MudAlert>
+                        }
+                        @if (_asignadoAId.HasValue && _selectedProyectoIds.Any() && !_usuarioAsignadoTieneAcceso)
+                        {
+                            <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2">
+                                El usuario asignado no tiene acceso a todos los proyectos seleccionados.
+                            </MudAlert>
+                        }
                     </MudItem>
 
                     <!-- Schedule -->
@@ -63,7 +98,7 @@
                                        Required="true"
                                        RequiredError="La fecha es obligatoria" />
                     </MudItem>
-                    
+
                     @if (_scheduleType == ScheduleType.Recurring)
                     {
                         <MudItem xs="12" sm="6">
@@ -79,7 +114,7 @@
                         @if (_recurrenceFrequency == RecurrenceFrequency.Custom)
                         {
                             <MudItem xs="12" sm="6">
-                                <MudNumericField T="int" @bind-Value="_customIntervalDays" 
+                                <MudNumericField T="int" @bind-Value="_customIntervalDays"
                                                  Label="Intervalo (días)" Min="1"
                                                  Variant="Variant.Outlined" />
                             </MudItem>
@@ -88,7 +123,7 @@
 
                     <!-- Lead Time -->
                     <MudItem xs="12" sm="6">
-                        <MudNumericField T="int" @bind-Value="_leadTimeDays" 
+                        <MudNumericField T="int" @bind-Value="_leadTimeDays"
                                          Label="Avisar con antelación (días)" Min="0"
                                          Variant="Variant.Outlined" />
                     </MudItem>
@@ -106,7 +141,7 @@
                             }
                         </MudChipSet>
                         <div class="d-flex gap-2 mt-2">
-                            <MudTextField @bind-Value="_newTag" Label="Nueva etiqueta" 
+                            <MudTextField @bind-Value="_newTag" Label="Nueva etiqueta"
                                           Variant="Variant.Outlined" Dense="true" />
                             <MudButton Variant="Variant.Outlined" OnClick="AddTag">Añadir</MudButton>
                         </div>
@@ -122,11 +157,11 @@
                         {
                             <MudGrid Class="mb-2">
                                 <MudItem xs="5">
-                                    <MudTextField Value="@kvp.Key" Label="Clave" Disabled="true" 
+                                    <MudTextField Value="@kvp.Key" Label="Clave" Disabled="true"
                                                   Variant="Variant.Outlined" Dense="true" />
                                 </MudItem>
                                 <MudItem xs="5">
-                                    <MudTextField Value="@kvp.Value" Label="Valor" 
+                                    <MudTextField Value="@kvp.Value" Label="Valor"
                                                   ValueChanged="@((string v) => UpdateMetadata(kvp.Key, v))"
                                                   Variant="Variant.Outlined" Dense="true" />
                                 </MudItem>
@@ -137,9 +172,9 @@
                             </MudGrid>
                         }
                         <div class="d-flex gap-2 mt-2">
-                            <MudTextField @bind-Value="_newMetaKey" Label="Clave" 
+                            <MudTextField @bind-Value="_newMetaKey" Label="Clave"
                                           Variant="Variant.Outlined" Dense="true" />
-                            <MudTextField @bind-Value="_newMetaValue" Label="Valor" 
+                            <MudTextField @bind-Value="_newMetaValue" Label="Valor"
                                           Variant="Variant.Outlined" Dense="true" />
                             <MudButton Variant="Variant.Outlined" OnClick="AddMetadata">Añadir</MudButton>
                         </div>
@@ -148,7 +183,7 @@
                     <!-- Actions -->
                     <MudItem xs="12" Class="d-flex justify-end gap-2 mt-4">
                         <MudButton Variant="Variant.Text" Href="/backoffice/reminders">Cancelar</MudButton>
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
                                    Disabled="!_isValid || _saving"
                                    OnClick="SaveAsync">
                             @if (_saving)
@@ -166,8 +201,11 @@
 
 @code {
     [Parameter] public Guid? Id { get; set; }
-    
+
     [Inject] private IReminderService ReminderService { get; set; } = default!;
+    [Inject] private IUsuarioService UsuarioService { get; set; } = default!;
+    [Inject] private IUsuarioProyectoService UsuarioProyectoService { get; set; } = default!;
+    [Inject] private ICurrentUserService CurrentUserService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
 
@@ -177,11 +215,17 @@
     private bool _saving;
     private bool _isEdit => Id.HasValue;
 
+    private List<UsuarioDto> _usuariosDisponibles = [];
+    private List<ProyectoAsignadoDto> _proyectosUsuario = [];
+    private Guid _usuarioActualId;
+    private Guid? _proyectoGeneralId;
+    private bool _usuarioAsignadoTieneAcceso = true;
+
     // Form fields
     private string _title = "";
     private string? _description;
     private Category _category = Category.Reminder;
-    private string? _assignee;
+    private Guid? _asignadoAId;
     private ScheduleType _scheduleType = ScheduleType.OneTime;
     private DateTime? _dueAt = DateTime.Today.AddMonths(1);
     private RecurrenceFrequency _recurrenceFrequency = RecurrenceFrequency.Monthly;
@@ -189,13 +233,33 @@
     private int _leadTimeDays = 30;
     private List<string> _tags = [];
     private Dictionary<string, string> _metadata = new();
-    
+    private IEnumerable<Guid> _selectedProyectoIds = [];
+
     private string _newTag = "";
     private string _newMetaKey = "";
     private string _newMetaValue = "";
 
     protected override async Task OnInitializedAsync()
     {
+        _usuariosDisponibles = (await UsuarioService.GetActivosAsync()).ToList();
+
+        // Obtener usuario actual y sus proyectos
+        var currentUserName = CurrentUserService.CurrentUserName;
+        if (!string.IsNullOrEmpty(currentUserName))
+        {
+            var usuario = await UsuarioService.GetByNombreAsync(currentUserName);
+            if (usuario != null)
+            {
+                _usuarioActualId = usuario.Id;
+                _proyectosUsuario = (await UsuarioProyectoService.GetProyectosDelUsuarioAsync(_usuarioActualId))
+                    .Where(p => p.Rol != RolProyecto.Viewer)
+                    .ToList();
+
+                var proyectoGeneral = await UsuarioProyectoService.GetProyectoGeneralAsync();
+                _proyectoGeneralId = proyectoGeneral?.Id;
+            }
+        }
+
         if (_isEdit && Id.HasValue)
         {
             var item = await ReminderService.GetByIdAsync(Id.Value);
@@ -204,7 +268,7 @@
                 _title = item.Title;
                 _description = item.Description;
                 _category = item.Category;
-                _assignee = item.Assignee;
+                _asignadoAId = item.AsignadoAId;
                 _scheduleType = item.ScheduleType;
                 _dueAt = item.DueAt ?? item.NextOccurrenceAt;
                 _recurrenceFrequency = item.RecurrenceFrequency ?? RecurrenceFrequency.Monthly;
@@ -212,8 +276,18 @@
                 _leadTimeDays = item.LeadTimeDays.FirstOrDefault(30);
                 _tags = item.Tags.ToList();
                 _metadata = item.Metadata.ToDictionary(x => x.Key, x => x.Value);
+                _selectedProyectoIds = item.Proyectos.Select(p => p.Id).ToList();
             }
         }
+        else
+        {
+            // Por defecto, seleccionar Proyecto General si el usuario tiene acceso
+            if (_proyectoGeneralId.HasValue && _proyectosUsuario.Any(p => p.EsGeneral))
+            {
+                _selectedProyectoIds = [_proyectoGeneralId.Value];
+            }
+        }
+
         _loading = false;
     }
 
@@ -222,9 +296,29 @@
         await _form.Validate();
         if (!_isValid) return;
 
+        // Validar que no se mezcle General con otros proyectos
+        if (_proyectoGeneralId.HasValue && _selectedProyectoIds.Contains(_proyectoGeneralId.Value) && _selectedProyectoIds.Count() > 1)
+        {
+            Snackbar.Add("No puede mezclar 'General' con otros proyectos", MudBlazor.Severity.Error);
+            return;
+        }
+
+        // Validar que el usuario asignado tenga acceso a los proyectos
+        if (_asignadoAId.HasValue && _selectedProyectoIds.Any())
+        {
+            var tieneAcceso = await UsuarioProyectoService.TieneAccesoATodosAsync(_asignadoAId.Value, _selectedProyectoIds);
+            if (!tieneAcceso)
+            {
+                Snackbar.Add("El usuario asignado no tiene acceso a todos los proyectos seleccionados", MudBlazor.Severity.Error);
+                return;
+            }
+        }
+
         _saving = true;
         try
         {
+            var proyectoIds = _selectedProyectoIds.Any() ? _selectedProyectoIds.ToList() : null;
+
             if (_isEdit && Id.HasValue)
             {
                 var dto = new UpdateReminderItemDto(
@@ -232,7 +326,7 @@
                     _description,
                     _category,
                     _tags,
-                    _assignee,
+                    _asignadoAId,
                     ItemStatus.Active,
                     _scheduleType,
                     _dueAt,
@@ -240,9 +334,10 @@
                     _recurrenceFrequency == RecurrenceFrequency.Custom ? _customIntervalDays : null,
                     "Europe/Madrid",
                     [_leadTimeDays],
-                    _metadata
+                    _metadata,
+                    proyectoIds
                 );
-                await ReminderService.UpdateAsync(Id.Value, dto);
+                await ReminderService.UpdateAsync(_usuarioActualId, Id.Value, dto);
                 Snackbar.Add("Recordatorio actualizado", MudBlazor.Severity.Success);
             }
             else
@@ -252,20 +347,25 @@
                     _description,
                     _category,
                     _tags,
-                    _assignee,
+                    _asignadoAId,
                     _scheduleType,
                     _dueAt,
                     _scheduleType == ScheduleType.Recurring ? _recurrenceFrequency : null,
                     _recurrenceFrequency == RecurrenceFrequency.Custom ? _customIntervalDays : null,
                     "Europe/Madrid",
                     [_leadTimeDays],
-                    _metadata
+                    _metadata,
+                    proyectoIds
                 );
-                await ReminderService.CreateAsync(dto);
+                await ReminderService.CreateAsync(_usuarioActualId, dto);
                 Snackbar.Add("Recordatorio creado", MudBlazor.Severity.Success);
             }
-            
+
             Navigation.NavigateTo("/backoffice/reminders");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Snackbar.Add(ex.Message, MudBlazor.Severity.Error);
         }
         catch (Exception ex)
         {
@@ -275,6 +375,18 @@
         {
             _saving = false;
         }
+    }
+
+    private string GetProyectosSeleccionadosText(List<string> ids)
+    {
+        if (!ids.Any()) return "Sin proyectos (se asignará a General)";
+
+        var nombres = _proyectosUsuario
+            .Where(p => ids.Contains(p.Id.ToString()))
+            .Select(p => p.EsGeneral ? "General" : p.Nombre)
+            .ToList();
+
+        return string.Join(", ", nombres);
     }
 
     private void AddTag()
