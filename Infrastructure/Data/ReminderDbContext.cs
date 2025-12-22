@@ -23,6 +23,10 @@ public class ReminderDbContext : DbContext
     public DbSet<EnlaceProyecto> EnlacesProyecto => Set<EnlaceProyecto>();
     public DbSet<RecursoProyecto> RecursosProyecto => Set<RecursoProyecto>();
 
+    // Módulo Kanban
+    public DbSet<KanbanColumn> KanbanColumnas => Set<KanbanColumn>();
+    public DbSet<KanbanTask> KanbanTareas => Set<KanbanTask>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

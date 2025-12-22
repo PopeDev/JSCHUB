@@ -1,0 +1,582 @@
+@page "/backoffice/proyectos/{ProyectoId:guid}/pizarra"
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@using JSCHUB.Domain.Enums
+@rendermode InteractiveServer
+
+<PageTitle>Pizarra - @(_board?.ProyectoNombre ?? "Proyecto") - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4 px-4" Style="max-width: 100%;">
+    @if (_loading)
+    {
+        <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+    }
+    else if (_notFound)
+    {
+        <MudAlert Severity="Severity.Error">
+            No se encontró el proyecto solicitado.
+            <MudLink Href="/backoffice/proyectos" Class="ml-2">Volver al listado</MudLink>
+        </MudAlert>
+    }
+    else if (_board != null)
+    {
+        @* Cabecera *@
+        <MudPaper Class="pa-3 mb-4" Elevation="1">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Dashboard" Size="Size.Large" Color="Color.Primary" />
+                    <MudText Typo="Typo.h5">Pizarra: @_board.ProyectoNombre</MudText>
+                </MudStack>
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="OpenNewColumnDialog">
+                        Nueva columna
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Secondary"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.ArrowBack"
+                               Href="@($"/backoffice/proyectos/{ProyectoId}")">
+                        Volver
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+
+        @* Tablero Kanban *@
+        <div class="kanban-board" style="display: flex; gap: 16px; overflow-x: auto; padding-bottom: 16px; min-height: 500px;">
+            @foreach (var column in _board.Columnas.OrderBy(c => c.Posicion))
+            {
+                <MudPaper Class="kanban-column pa-2" Elevation="1" Style="min-width: 300px; max-width: 350px; flex-shrink: 0; background-color: var(--mud-palette-background-grey);">
+                    @* Header de columna *@
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">@column.Titulo</MudText>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@column.Tareas.Count()</MudChip>
+                        </MudStack>
+                        <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true">
+                            <MudMenuItem Icon="@Icons.Material.Filled.Edit" OnClick="@(() => OpenRenameColumnDialog(column))">Renombrar</MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Filled.ChevronLeft" OnClick="@(() => MoveColumnAsync(column.Id, column.Posicion - 1))" Disabled="@(column.Posicion == 0)">Mover izquierda</MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Filled.ChevronRight" OnClick="@(() => MoveColumnAsync(column.Id, column.Posicion + 1))" Disabled="@(column.Posicion >= _board.Columnas.Count() - 1)">Mover derecha</MudMenuItem>
+                            <MudDivider />
+                            <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error" OnClick="@(() => DeleteColumnAsync(column))">Eliminar</MudMenuItem>
+                        </MudMenu>
+                    </MudStack>
+
+                    @* Botón añadir tarea *@
+                    <MudButton Variant="Variant.Text"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               FullWidth="true"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="@(() => OpenNewTaskDialog(column.Id))"
+                               Class="mb-2">
+                        Añadir tarea
+                    </MudButton>
+
+                    @* Lista de tareas *@
+                    <div class="kanban-tasks" style="display: flex; flex-direction: column; gap: 8px; max-height: 600px; overflow-y: auto;">
+                        @foreach (var task in column.Tareas.OrderBy(t => t.Posicion))
+                        {
+                            <MudCard Elevation="2" Class="kanban-task" Style="cursor: pointer;" @onclick="@(() => OpenEditTaskDialog(task))">
+                                <MudCardContent Class="pa-2">
+                                    <MudStack Spacing="1">
+                                        @* Título y prioridad *@
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                                            <MudText Typo="Typo.body2" Style="font-weight: 500;">@task.Titulo</MudText>
+                                            <MudChip T="string" Size="Size.Small" Color="@GetPrioridadColor(task.Prioridad)" Variant="Variant.Filled" Style="height: 20px; font-size: 10px;">
+                                                @GetPrioridadLabel(task.Prioridad)
+                                            </MudChip>
+                                        </MudStack>
+
+                                        @* Descripción (truncada) *@
+                                        @if (!string.IsNullOrWhiteSpace(task.Descripcion))
+                                        {
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Style="max-height: 40px; overflow: hidden; text-overflow: ellipsis;">
+                                                @(task.Descripcion.Length > 80 ? task.Descripcion.Substring(0, 80) + "..." : task.Descripcion)
+                                            </MudText>
+                                        }
+
+                                        @* Footer: usuario y horas *@
+                                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mt-1">
+                                            @if (!string.IsNullOrWhiteSpace(task.AsignadoANombre))
+                                            {
+                                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Person" Style="height: 22px; font-size: 11px;">
+                                                    @task.AsignadoANombre
+                                                </MudChip>
+                                            }
+                                            else
+                                            {
+                                                <span></span>
+                                            }
+                                            @if (task.HorasEstimadas > 0)
+                                            {
+                                                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Icon="@Icons.Material.Filled.Schedule" Style="height: 22px; font-size: 11px;">
+                                                    @task.HorasEstimadas.ToString("0.#")h
+                                                </MudChip>
+                                            }
+                                        </MudStack>
+                                    </MudStack>
+                                </MudCardContent>
+                            </MudCard>
+                        }
+                    </div>
+                </MudPaper>
+            }
+
+            @* Placeholder si no hay columnas *@
+            @if (!_board.Columnas.Any())
+            {
+                <MudPaper Class="pa-4" Elevation="0" Style="min-width: 300px; border: 2px dashed var(--mud-palette-divider);">
+                    <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="min-height: 200px;">
+                        <MudIcon Icon="@Icons.Material.Filled.ViewColumn" Size="Size.Large" Color="Color.Secondary" />
+                        <MudText Typo="Typo.body1" Color="Color.Secondary">No hay columnas</MudText>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenNewColumnDialog">
+                            Crear primera columna
+                        </MudButton>
+                    </MudStack>
+                </MudPaper>
+            }
+        </div>
+    }
+</MudContainer>
+
+@* Dialog para nueva/renombrar columna *@
+<MudDialog @bind-Visible="_showColumnDialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(_editingColumn == null ? "Nueva columna" : "Renombrar columna")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField T="string" @bind-Value="_columnTitulo" Label="Título" Required="true" RequiredError="El título es obligatorio" MaxLength="100" Immediate="true" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseColumnDialog">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(string.IsNullOrWhiteSpace(_columnTitulo) || _savingColumn)" OnClick="SaveColumnAsync">
+            @if (_savingColumn)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Guardar
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@* Dialog para eliminar columna con tareas *@
+<MudDialog @bind-Visible="_showDeleteColumnDialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Eliminar columna</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_columnToDelete != null && _columnToDelete.Tareas.Any())
+        {
+            <MudAlert Severity="Severity.Warning" Class="mb-4">
+                Esta columna tiene <strong>@_columnToDelete.Tareas.Count() tarea(s)</strong>.
+                Seleccione una columna destino para moverlas.
+            </MudAlert>
+            <MudSelect T="Guid?" @bind-Value="_targetColumnId" Label="Mover tareas a" Required="true">
+                @foreach (var col in _board?.Columnas.Where(c => c.Id != _columnToDelete.Id).OrderBy(c => c.Posicion) ?? Enumerable.Empty<KanbanColumnDto>())
+                {
+                    <MudSelectItem T="Guid?" Value="@col.Id">@col.Titulo</MudSelectItem>
+                }
+            </MudSelect>
+        }
+        else
+        {
+            <MudText>¿Está seguro de que desea eliminar la columna "@_columnToDelete?.Titulo"?</MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showDeleteColumnDialog = false)">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error"
+                   Disabled="@(_columnToDelete?.Tareas.Any() == true && _targetColumnId == null)"
+                   OnClick="ConfirmDeleteColumnAsync">
+            Eliminar
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@* Dialog para crear/editar tarea *@
+<MudDialog @bind-Visible="_showTaskDialog" Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(_editingTask == null ? "Nueva tarea" : "Editar tarea")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_taskForm" @bind-IsValid="_taskFormValid">
+            <MudGrid Spacing="2">
+                <MudItem xs="12">
+                    <MudTextField T="string" @bind-Value="_taskTitulo" Label="Título *" Required="true" RequiredError="El título es obligatorio" MaxLength="200" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" @bind-Value="_taskDescripcion" Label="Descripción" Lines="3" MaxLength="2000" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="Guid?" @bind-Value="_taskAsignadoAId" Label="Asignado a" Clearable="true">
+                        @foreach (var usuario in _usuarios)
+                        {
+                            <MudSelectItem T="Guid?" Value="@usuario.Id">@usuario.Nombre</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="PrioridadTarea" @bind-Value="_taskPrioridad" Label="Prioridad">
+                        <MudSelectItem T="PrioridadTarea" Value="@(PrioridadTarea.Baja)">Baja</MudSelectItem>
+                        <MudSelectItem T="PrioridadTarea" Value="@(PrioridadTarea.Media)">Media</MudSelectItem>
+                        <MudSelectItem T="PrioridadTarea" Value="@(PrioridadTarea.Alta)">Alta</MudSelectItem>
+                        <MudSelectItem T="PrioridadTarea" Value="@(PrioridadTarea.Urgente)">Urgente</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="decimal" @bind-Value="_taskHorasEstimadas" Label="Horas estimadas" Min="0" Max="999" Step="0.5M" />
+                </MudItem>
+                @if (_editingTask != null)
+                {
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="Guid" @bind-Value="_taskColumnaId" Label="Columna">
+                            @foreach (var col in _board?.Columnas.OrderBy(c => c.Posicion) ?? Enumerable.Empty<KanbanColumnDto>())
+                            {
+                                <MudSelectItem T="Guid" Value="@col.Id">@col.Titulo</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        @if (_editingTask != null)
+        {
+            <MudButton Color="Color.Error" OnClick="DeleteTaskAsync" Class="mr-auto">Eliminar</MudButton>
+        }
+        <MudButton OnClick="CloseTaskDialog">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!_taskFormValid || _savingTask)" OnClick="SaveTaskAsync">
+            @if (_savingTask)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Guardar
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public Guid ProyectoId { get; set; }
+
+    [Inject] private IKanbanService KanbanService { get; set; } = default!;
+    [Inject] private IUsuarioService UsuarioService { get; set; } = default!;
+    [Inject] private ICurrentUserService CurrentUserService { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
+
+    private bool _loading = true;
+    private bool _notFound;
+    private KanbanBoardDto? _board;
+    private IEnumerable<UsuarioDto> _usuarios = Enumerable.Empty<UsuarioDto>();
+
+    // Dialog Columna
+    private bool _showColumnDialog;
+    private bool _savingColumn;
+    private KanbanColumnDto? _editingColumn;
+    private string _columnTitulo = string.Empty;
+
+    // Dialog Eliminar Columna
+    private bool _showDeleteColumnDialog;
+    private KanbanColumnDto? _columnToDelete;
+    private Guid? _targetColumnId;
+
+    // Dialog Tarea
+    private bool _showTaskDialog;
+    private MudForm? _taskForm;
+    private bool _taskFormValid;
+    private bool _savingTask;
+    private KanbanTaskDto? _editingTask;
+    private Guid _taskColumnaId;
+    private string _taskTitulo = string.Empty;
+    private string? _taskDescripcion;
+    private Guid? _taskAsignadoAId;
+    private PrioridadTarea _taskPrioridad = PrioridadTarea.Media;
+    private decimal _taskHorasEstimadas;
+
+    private string CurrentUser => CurrentUserService.CurrentUserName ?? "sistema";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            // Cargar usuarios primero
+            _usuarios = await UsuarioService.GetAllAsync();
+
+            // Asegurar columnas por defecto y cargar tablero
+            await KanbanService.EnsureDefaultColumnsAsync(ProyectoId, CurrentUser);
+            _board = await KanbanService.GetBoardAsync(ProyectoId);
+
+            if (_board == null)
+            {
+                _notFound = true;
+            }
+        }
+        catch (KeyNotFoundException)
+        {
+            _notFound = true;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al cargar el tablero: {ex.Message}", Severity.Error);
+            _notFound = true;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    // ========== COLUMNAS ==========
+
+    private void OpenNewColumnDialog()
+    {
+        _editingColumn = null;
+        _columnTitulo = string.Empty;
+        _showColumnDialog = true;
+    }
+
+    private void OpenRenameColumnDialog(KanbanColumnDto column)
+    {
+        _editingColumn = column;
+        _columnTitulo = column.Titulo;
+        _showColumnDialog = true;
+    }
+
+    private void CloseColumnDialog()
+    {
+        _showColumnDialog = false;
+        _editingColumn = null;
+    }
+
+    private async Task SaveColumnAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_columnTitulo)) return;
+
+        _savingColumn = true;
+        try
+        {
+            if (_editingColumn == null)
+            {
+                var dto = new CreateKanbanColumnDto(ProyectoId, _columnTitulo, null);
+                await KanbanService.CreateColumnAsync(dto, CurrentUser);
+                Snackbar.Add("Columna creada", Severity.Success);
+            }
+            else
+            {
+                await KanbanService.RenameColumnAsync(_editingColumn.Id, _columnTitulo, CurrentUser);
+                Snackbar.Add("Columna renombrada", Severity.Success);
+            }
+
+            CloseColumnDialog();
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _savingColumn = false;
+        }
+    }
+
+    private async Task MoveColumnAsync(Guid columnId, int newPosition)
+    {
+        try
+        {
+            await KanbanService.MoveColumnAsync(columnId, newPosition, CurrentUser);
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al mover columna: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void DeleteColumnAsync(KanbanColumnDto column)
+    {
+        _columnToDelete = column;
+        _targetColumnId = null;
+
+        if (!column.Tareas.Any())
+        {
+            // Si no tiene tareas, confirmar directamente
+            _showDeleteColumnDialog = true;
+        }
+        else if (_board?.Columnas.Count() <= 1)
+        {
+            // Si es la única columna y tiene tareas, no permitir
+            Snackbar.Add("No se puede eliminar la única columna con tareas", Severity.Warning);
+        }
+        else
+        {
+            _showDeleteColumnDialog = true;
+        }
+    }
+
+    private async Task ConfirmDeleteColumnAsync()
+    {
+        if (_columnToDelete == null) return;
+
+        try
+        {
+            await KanbanService.DeleteColumnAsync(_columnToDelete.Id, _targetColumnId);
+            Snackbar.Add("Columna eliminada", Severity.Warning);
+            _showDeleteColumnDialog = false;
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    // ========== TAREAS ==========
+
+    private void OpenNewTaskDialog(Guid columnaId)
+    {
+        _editingTask = null;
+        _taskColumnaId = columnaId;
+        _taskTitulo = string.Empty;
+        _taskDescripcion = null;
+        _taskAsignadoAId = null;
+        _taskPrioridad = PrioridadTarea.Media;
+        _taskHorasEstimadas = 0;
+        _showTaskDialog = true;
+    }
+
+    private void OpenEditTaskDialog(KanbanTaskDto task)
+    {
+        _editingTask = task;
+        _taskColumnaId = task.ColumnaId;
+        _taskTitulo = task.Titulo;
+        _taskDescripcion = task.Descripcion;
+        _taskAsignadoAId = task.AsignadoAId;
+        _taskPrioridad = task.Prioridad;
+        _taskHorasEstimadas = task.HorasEstimadas;
+        _showTaskDialog = true;
+    }
+
+    private void CloseTaskDialog()
+    {
+        _showTaskDialog = false;
+        _editingTask = null;
+    }
+
+    private async Task SaveTaskAsync()
+    {
+        if (_taskForm != null)
+        {
+            await _taskForm.Validate();
+            if (!_taskFormValid) return;
+        }
+
+        _savingTask = true;
+        try
+        {
+            if (_editingTask == null)
+            {
+                var dto = new CreateKanbanTaskDto(
+                    ProyectoId,
+                    _taskColumnaId,
+                    _taskTitulo,
+                    _taskDescripcion,
+                    _taskAsignadoAId,
+                    _taskPrioridad,
+                    _taskHorasEstimadas,
+                    null);
+                await KanbanService.CreateTaskAsync(dto, CurrentUser);
+                Snackbar.Add("Tarea creada", Severity.Success);
+            }
+            else
+            {
+                // Actualizar datos de la tarea
+                var updateDto = new UpdateKanbanTaskDto(
+                    _taskTitulo,
+                    _taskDescripcion,
+                    _taskAsignadoAId,
+                    _taskPrioridad,
+                    _taskHorasEstimadas);
+                await KanbanService.UpdateTaskAsync(_editingTask.Id, updateDto, CurrentUser);
+
+                // Si cambió de columna, moverla
+                if (_taskColumnaId != _editingTask.ColumnaId)
+                {
+                    await KanbanService.MoveTaskAsync(_editingTask.Id, _taskColumnaId, null, CurrentUser);
+                }
+
+                Snackbar.Add("Tarea actualizada", Severity.Success);
+            }
+
+            CloseTaskDialog();
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _savingTask = false;
+        }
+    }
+
+    private async Task DeleteTaskAsync()
+    {
+        if (_editingTask == null) return;
+
+        var result = await DialogService.ShowMessageBox(
+            "Confirmar eliminación",
+            $"¿Eliminar la tarea \"{_editingTask.Titulo}\"?",
+            yesText: "Eliminar",
+            cancelText: "Cancelar");
+
+        if (result == true)
+        {
+            try
+            {
+                await KanbanService.DeleteTaskAsync(_editingTask.Id);
+                Snackbar.Add("Tarea eliminada", Severity.Warning);
+                CloseTaskDialog();
+                await LoadDataAsync();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    // ========== HELPERS ==========
+
+    private static Color GetPrioridadColor(PrioridadTarea prioridad) => prioridad switch
+    {
+        PrioridadTarea.Baja => Color.Default,
+        PrioridadTarea.Media => Color.Info,
+        PrioridadTarea.Alta => Color.Warning,
+        PrioridadTarea.Urgente => Color.Error,
+        _ => Color.Default
+    };
+
+    private static string GetPrioridadLabel(PrioridadTarea prioridad) => prioridad switch
+    {
+        PrioridadTarea.Baja => "Baja",
+        PrioridadTarea.Media => "Media",
+        PrioridadTarea.Alta => "Alta",
+        PrioridadTarea.Urgente => "Urgente",
+        _ => prioridad.ToString()
+    };
+}
