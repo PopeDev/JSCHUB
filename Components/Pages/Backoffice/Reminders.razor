@@ -12,9 +12,10 @@
             <MudIcon Icon="@Icons.Material.Filled.EventNote" Class="mr-2" />
             Recordatorios y Renovaciones
         </MudText>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
                    StartIcon="@Icons.Material.Filled.Add"
-                   Href="/backoffice/reminders/new">
+                   Href="/backoffice/reminders/new"
+                   Disabled="@(!_puedeCrear)">
             Nuevo
         </MudButton>
     </div>
@@ -22,13 +23,33 @@
     <!-- Filters -->
     <MudPaper Class="pa-3 mb-4">
         <MudGrid>
-            <MudItem xs="12" sm="3">
-                <MudTextField @bind-Value="_searchText" Label="Buscar" 
+            <MudItem xs="12" sm="2">
+                <MudTextField @bind-Value="_searchText" Label="Buscar"
                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-                              Variant="Variant.Outlined" Dense="true" 
+                              Variant="Variant.Outlined" Dense="true"
                               DebounceInterval="300" OnDebounceIntervalElapsed="LoadDataAsync" />
             </MudItem>
             <MudItem xs="6" sm="2">
+                <MudSelect T="Guid?" @bind-Value="_filterProyectoId" Label="Proyecto" Clearable="true"
+                           Variant="Variant.Outlined" Dense="true">
+                    @foreach (var proyecto in _proyectosUsuario)
+                    {
+                        <MudSelectItem Value="@((Guid?)proyecto.Id)">
+                            @(proyecto.EsGeneral ? "🌐 General" : proyecto.Nombre)
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="6" sm="2">
+                <MudSelect T="Guid?" @bind-Value="_filterAsignadoAId" Label="Asignado a" Clearable="true"
+                           Variant="Variant.Outlined" Dense="true">
+                    @foreach (var usuario in _usuarios)
+                    {
+                        <MudSelectItem Value="@((Guid?)usuario.Id)">@usuario.Nombre</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="6" sm="1">
                 <MudSelect T="Category?" Value="_filterCategory" Label="Categoría" Clearable="true"
                            Variant="Variant.Outlined" Dense="true"
                            ValueChanged="@(async (Category? c) => { _filterCategory = c; await LoadDataAsync(); })">
@@ -37,7 +58,7 @@
                     <MudSelectItem Value="@((Category?)Category.Other)">Otro</MudSelectItem>
                 </MudSelect>
             </MudItem>
-            <MudItem xs="6" sm="2">
+            <MudItem xs="6" sm="1">
                 <MudSelect T="ItemStatus?" Value="_filterStatus" Label="Estado" Clearable="true"
                            Variant="Variant.Outlined" Dense="true"
                            ValueChanged="@(async (ItemStatus? s) => { _filterStatus = s; await LoadDataAsync(); })">
@@ -46,8 +67,8 @@
                     <MudSelectItem Value="@((ItemStatus?)ItemStatus.Archived)">Archivado</MudSelectItem>
                 </MudSelect>
             </MudItem>
-            <MudItem xs="12" sm="3">
-                <MudTextField @bind-Value="_filterTag" Label="Etiqueta" 
+            <MudItem xs="12" sm="2">
+                <MudTextField @bind-Value="_filterTag" Label="Etiqueta"
                               Variant="Variant.Outlined" Dense="true" />
             </MudItem>
             <MudItem xs="12" sm="2" Class="d-flex align-center">
@@ -73,12 +94,13 @@
         <MudTable Items="_items" Hover="true" Striped="true" Elevation="2">
             <HeaderContent>
                 <MudTh>Título</MudTh>
-                <MudTh>Categoría</MudTh>
+                <MudTh>Proyecto</MudTh>
+                <MudTh>Asignado</MudTh>
                 <MudTh>Tipo</MudTh>
                 <MudTh>Próxima Fecha</MudTh>
                 <MudTh>Estado</MudTh>
                 <MudTh>Alertas</MudTh>
-                <MudTh Style="width: 180px">Acciones</MudTh>
+                <MudTh Style="width: 160px">Acciones</MudTh>
             </HeaderContent>
             <RowTemplate>
                 <MudTd>
@@ -94,9 +116,35 @@
                     }
                 </MudTd>
                 <MudTd>
-                    <MudChip T="string" Size="Size.Small" Color="@GetCategoryColor(context.Category)">
-                        @context.Category
-                    </MudChip>
+                    @if (context.EsGeneral)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                            🌐 General
+                        </MudChip>
+                    }
+                    else
+                    {
+                        @foreach (var proyecto in context.Proyectos.Take(2))
+                        {
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@proyecto.Nombre</MudChip>
+                        }
+                        @if (context.Proyectos.Count > 2)
+                        {
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text">+@(context.Proyectos.Count - 2)</MudChip>
+                        }
+                    }
+                </MudTd>
+                <MudTd>
+                    @if (!string.IsNullOrEmpty(context.AsignadoANombre))
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                            @context.AsignadoANombre
+                        </MudChip>
+                    }
+                    else
+                    {
+                        <span class="mud-text-secondary">-</span>
+                    }
                 </MudTd>
                 <MudTd>
                     @if (context.ScheduleType == ScheduleType.Recurring)
@@ -155,23 +203,23 @@
                     }
                 </MudTd>
                 <MudTd>
-                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.CheckCircle" 
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.CheckCircle"
                                    Color="Color.Success" Title="Completar"
                                    OnClick="@(() => CompleteAsync(context.Id))" />
                     @if (context.Status == ItemStatus.Active)
                     {
-                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Pause" 
+                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Pause"
                                        Title="Pausar" OnClick="@(() => PauseAsync(context.Id))" />
                     }
                     else if (context.Status == ItemStatus.Paused)
                     {
-                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.PlayArrow" 
+                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.PlayArrow"
                                        Color="Color.Primary" Title="Reanudar"
                                        OnClick="@(() => ResumeAsync(context.Id))" />
                     }
-                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit" 
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit"
                                    Href="@($"/backoffice/reminders/{context.Id}/edit")" />
-                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Delete" 
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Delete"
                                    Color="Color.Error" Title="Archivar"
                                    OnClick="@(() => DeleteAsync(context.Id))" />
                 </MudTd>
@@ -185,39 +233,75 @@
 
 @code {
     [Inject] private IReminderService ReminderService { get; set; } = default!;
+    [Inject] private IUsuarioService UsuarioService { get; set; } = default!;
+    [Inject] private IUsuarioProyectoService UsuarioProyectoService { get; set; } = default!;
+    [Inject] private ICurrentUserService CurrentUserService { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
 
     private bool _loading = true;
     private List<ReminderItemDto> _items = [];
+    private List<UsuarioDto> _usuarios = [];
+    private List<ProyectoAsignadoDto> _proyectosUsuario = [];
     private int _totalCount;
-    
+    private Guid _usuarioActualId;
+    private bool _puedeCrear;
+
     private string? _searchText;
     private Category? _filterCategory;
     private ItemStatus? _filterStatus = ItemStatus.Active;
     private string? _filterTag;
+    private Guid? _filterProyectoId;
+    private Guid? _filterAsignadoAId;
 
     protected override async Task OnInitializedAsync()
     {
+        _usuarios = (await UsuarioService.GetAllAsync()).ToList();
+
+        // Obtener usuario actual
+        var currentUserName = CurrentUserService.CurrentUserName;
+        if (!string.IsNullOrEmpty(currentUserName))
+        {
+            var usuario = await UsuarioService.GetByNombreAsync(currentUserName);
+            if (usuario != null)
+            {
+                _usuarioActualId = usuario.Id;
+                _proyectosUsuario = (await UsuarioProyectoService.GetProyectosDelUsuarioAsync(_usuarioActualId)).ToList();
+                _puedeCrear = _proyectosUsuario.Any(p => p.Rol != RolProyecto.Viewer);
+            }
+        }
+
         await LoadDataAsync();
     }
 
     private async Task LoadDataAsync()
     {
+        if (_usuarioActualId == Guid.Empty)
+        {
+            _loading = false;
+            return;
+        }
+
         _loading = true;
         try
         {
             _items = (await ReminderService.SearchAsync(
+                usuarioActualId: _usuarioActualId,
                 searchText: _searchText,
                 category: _filterCategory,
                 status: _filterStatus,
                 tag: _filterTag,
+                asignadoAId: _filterAsignadoAId,
+                proyectoId: _filterProyectoId,
                 take: 100)).ToList();
-            
+
             _totalCount = await ReminderService.CountAsync(
+                usuarioActualId: _usuarioActualId,
                 searchText: _searchText,
                 category: _filterCategory,
                 status: _filterStatus,
-                tag: _filterTag);
+                tag: _filterTag,
+                asignadoAId: _filterAsignadoAId,
+                proyectoId: _filterProyectoId);
         }
         finally
         {
@@ -227,30 +311,58 @@
 
     private async Task CompleteAsync(Guid id)
     {
-        await ReminderService.CompleteAsync(id);
-        Snackbar.Add("Recordatorio completado", MudBlazor.Severity.Success);
-        await LoadDataAsync();
+        try
+        {
+            await ReminderService.CompleteAsync(_usuarioActualId, id);
+            Snackbar.Add("Recordatorio completado", MudBlazor.Severity.Success);
+            await LoadDataAsync();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Snackbar.Add(ex.Message, MudBlazor.Severity.Error);
+        }
     }
 
     private async Task PauseAsync(Guid id)
     {
-        await ReminderService.PauseAsync(id);
-        Snackbar.Add("Recordatorio pausado", MudBlazor.Severity.Info);
-        await LoadDataAsync();
+        try
+        {
+            await ReminderService.PauseAsync(_usuarioActualId, id);
+            Snackbar.Add("Recordatorio pausado", MudBlazor.Severity.Info);
+            await LoadDataAsync();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Snackbar.Add(ex.Message, MudBlazor.Severity.Error);
+        }
     }
 
     private async Task ResumeAsync(Guid id)
     {
-        await ReminderService.ResumeAsync(id);
-        Snackbar.Add("Recordatorio reanudado", MudBlazor.Severity.Success);
-        await LoadDataAsync();
+        try
+        {
+            await ReminderService.ResumeAsync(_usuarioActualId, id);
+            Snackbar.Add("Recordatorio reanudado", MudBlazor.Severity.Success);
+            await LoadDataAsync();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Snackbar.Add(ex.Message, MudBlazor.Severity.Error);
+        }
     }
 
     private async Task DeleteAsync(Guid id)
     {
-        await ReminderService.DeleteAsync(id);
-        Snackbar.Add("Recordatorio archivado", MudBlazor.Severity.Warning);
-        await LoadDataAsync();
+        try
+        {
+            await ReminderService.DeleteAsync(_usuarioActualId, id);
+            Snackbar.Add("Recordatorio archivado", MudBlazor.Severity.Warning);
+            await LoadDataAsync();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Snackbar.Add(ex.Message, MudBlazor.Severity.Error);
+        }
     }
 
     private static Color GetCategoryColor(Category category) => category switch

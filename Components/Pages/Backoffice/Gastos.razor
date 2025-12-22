@@ -14,7 +14,8 @@
         </MudText>
         <MudButton Variant="Variant.Filled" Color="Color.Primary"
                    StartIcon="@Icons.Material.Filled.Add"
-                   Href="/backoffice/gastos/new">
+                   Href="/backoffice/gastos/new"
+                   Disabled="@(!_puedeCrear)">
             Nuevo Gasto
         </MudButton>
     </div>
@@ -22,11 +23,22 @@
     <!-- Filtros -->
     <MudPaper Class="pa-3 mb-4">
         <MudGrid>
-            <MudItem xs="12" sm="3">
+            <MudItem xs="12" sm="2">
                 <MudTextField @bind-Value="_searchText" Label="Buscar"
                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
                               Variant="Variant.Outlined" Dense="true"
                               DebounceInterval="300" OnDebounceIntervalElapsed="@(async () => await LoadDataAsync())" />
+            </MudItem>
+            <MudItem xs="6" sm="2">
+                <MudSelect T="Guid?" @bind-Value="_filterProyectoId" Label="Proyecto" Clearable="true"
+                           Variant="Variant.Outlined" Dense="true">
+                    @foreach (var proyecto in _proyectosUsuario)
+                    {
+                        <MudSelectItem Value="@((Guid?)proyecto.Id)">
+                            @(proyecto.EsGeneral ? "🌐 General" : proyecto.Nombre)
+                        </MudSelectItem>
+                    }
+                </MudSelect>
             </MudItem>
             <MudItem xs="6" sm="2">
                 <MudSelect T="Guid?" @bind-Value="_filterPagadoPorId" Label="Pagado por" Clearable="true"
@@ -56,7 +68,7 @@
                     <MudSelectItem Value="@((EstadoGasto?)EstadoGasto.Anulado)">Anulado</MudSelectItem>
                 </MudSelect>
             </MudItem>
-            <MudItem xs="12" sm="2" Class="d-flex align-center">
+            <MudItem xs="12" sm="1" Class="d-flex align-center">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadDataAsync"
                            StartIcon="@Icons.Material.Filled.Search" FullWidth="true">
                     Filtrar
@@ -84,10 +96,11 @@
             <HeaderContent>
                 <MudTh>Fecha</MudTh>
                 <MudTh>Concepto</MudTh>
+                <MudTh>Proyecto</MudTh>
                 <MudTh Style="text-align: right">Importe</MudTh>
                 <MudTh>Pagado por</MudTh>
                 <MudTh>Estado</MudTh>
-                <MudTh Style="width: 180px">Acciones</MudTh>
+                <MudTh Style="width: 140px">Acciones</MudTh>
             </HeaderContent>
             <RowTemplate>
                 <MudTd>
@@ -99,6 +112,25 @@
                     @if (!string.IsNullOrEmpty(context.Notas))
                     {
                         <div class="mud-text-secondary" style="font-size: 0.85em">@TruncateNotes(context.Notas)</div>
+                    }
+                </MudTd>
+                <MudTd>
+                    @if (context.EsGeneral)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                            🌐 General
+                        </MudChip>
+                    }
+                    else
+                    {
+                        @foreach (var proyecto in context.Proyectos.Take(2))
+                        {
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@proyecto.Nombre</MudChip>
+                        }
+                        @if (context.Proyectos.Count > 2)
+                        {
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text">+@(context.Proyectos.Count - 2)</MudChip>
+                        }
                     }
                 </MudTd>
                 <MudTd Style="text-align: right; font-weight: bold">
@@ -173,15 +205,21 @@
 @code {
     [Inject] private IGastoService GastoService { get; set; } = default!;
     [Inject] private IUsuarioService UsuarioService { get; set; } = default!;
+    [Inject] private IUsuarioProyectoService UsuarioProyectoService { get; set; } = default!;
+    [Inject] private ICurrentUserService CurrentUserService { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
 
     private bool _loading = true;
     private List<GastoDto> _gastos = [];
     private List<UsuarioDto> _usuarios = [];
+    private List<ProyectoAsignadoDto> _proyectosUsuario = [];
     private int _totalCount;
+    private Guid _usuarioActualId;
+    private bool _puedeCrear;
 
     private string? _searchText;
     private Guid? _filterPagadoPorId;
+    private Guid? _filterProyectoId;
     private DateTime? _filterFechaDesde;
     private DateTime? _filterFechaHasta;
     private EstadoGasto? _filterEstado;
@@ -194,11 +232,31 @@
     protected override async Task OnInitializedAsync()
     {
         _usuarios = (await UsuarioService.GetAllAsync()).ToList();
+
+        // Obtener usuario actual
+        var currentUserName = CurrentUserService.CurrentUserName;
+        if (!string.IsNullOrEmpty(currentUserName))
+        {
+            var usuario = await UsuarioService.GetByNombreAsync(currentUserName);
+            if (usuario != null)
+            {
+                _usuarioActualId = usuario.Id;
+                _proyectosUsuario = (await UsuarioProyectoService.GetProyectosDelUsuarioAsync(_usuarioActualId)).ToList();
+                _puedeCrear = _proyectosUsuario.Any(p => p.Rol != Domain.Enums.RolProyecto.Viewer);
+            }
+        }
+
         await LoadDataAsync();
     }
 
     private async Task LoadDataAsync()
     {
+        if (_usuarioActualId == Guid.Empty)
+        {
+            _loading = false;
+            return;
+        }
+
         _loading = true;
         try
         {
@@ -206,19 +264,23 @@
             var fechaHasta = _filterFechaHasta.HasValue ? DateOnly.FromDateTime(_filterFechaHasta.Value) : (DateOnly?)null;
 
             _gastos = (await GastoService.SearchAsync(
+                usuarioActualId: _usuarioActualId,
                 searchText: _searchText,
                 pagadoPorId: _filterPagadoPorId,
                 fechaDesde: fechaDesde,
                 fechaHasta: fechaHasta,
                 estado: _filterEstado,
+                proyectoId: _filterProyectoId,
                 take: 100)).ToList();
 
             _totalCount = await GastoService.CountAsync(
+                usuarioActualId: _usuarioActualId,
                 searchText: _searchText,
                 pagadoPorId: _filterPagadoPorId,
                 fechaDesde: fechaDesde,
                 fechaHasta: fechaHasta,
-                estado: _filterEstado);
+                estado: _filterEstado,
+                proyectoId: _filterProyectoId);
         }
         finally
         {
@@ -232,9 +294,16 @@
         var result = await _anularConfirmation.ShowAsync();
         if (result == true)
         {
-            await GastoService.AnularAsync(gasto.Id);
-            Snackbar.Add("Gasto anulado", MudBlazor.Severity.Warning);
-            await LoadDataAsync();
+            try
+            {
+                await GastoService.AnularAsync(_usuarioActualId, gasto.Id);
+                Snackbar.Add("Gasto anulado", MudBlazor.Severity.Warning);
+                await LoadDataAsync();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                Snackbar.Add(ex.Message, MudBlazor.Severity.Error);
+            }
         }
         _gastoToAnular = null;
     }
@@ -247,9 +316,13 @@
         {
             try
             {
-                await GastoService.DeleteAsync(gasto.Id);
+                await GastoService.DeleteAsync(_usuarioActualId, gasto.Id);
                 Snackbar.Add("Gasto eliminado", MudBlazor.Severity.Success);
                 await LoadDataAsync();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                Snackbar.Add(ex.Message, MudBlazor.Severity.Error);
             }
             catch (Exception ex)
             {
