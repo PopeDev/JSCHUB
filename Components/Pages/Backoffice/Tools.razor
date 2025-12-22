@@ -1,0 +1,154 @@
+@page "/backoffice/tools"
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@rendermode InteractiveServer
+
+<PageTitle>Herramientas - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h4">
+            <MudIcon Icon="@Icons.Material.Filled.Build" Class="mr-2" />
+            Herramientas
+        </MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   Href="/backoffice/tools/new">
+            Nueva Herramienta
+        </MudButton>
+    </div>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else
+    {
+        <MudTable Items="_tools" Hover="true" Striped="true" Elevation="2">
+            <HeaderContent>
+                <MudTh>Nombre</MudTh>
+                <MudTh>Estado</MudTh>
+                <MudTh>Creado</MudTh>
+                <MudTh Style="width: 180px">Acciones</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    <MudText Typo="Typo.body1" Class="font-weight-bold">@context.Name</MudText>
+                </MudTd>
+                <MudTd>
+                    @if (context.Activo)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success">Activo</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default">Inactivo</MudChip>
+                    }
+                </MudTd>
+                <MudTd>
+                    <MudText Typo="Typo.body2">@context.CreadoEl.ToString("dd/MM/yyyy")</MudText>
+                </MudTd>
+                <MudTd>
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit"
+                                   Href="@($"/backoffice/tools/{context.Id}/edit")"
+                                   Title="Editar" />
+                    @if (context.Activo)
+                    {
+                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.VisibilityOff"
+                                       Color="Color.Warning" Title="Desactivar"
+                                       OnClick="@(() => ToggleActivoAsync(context.Id))" />
+                    }
+                    else
+                    {
+                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Visibility"
+                                       Color="Color.Success" Title="Activar"
+                                       OnClick="@(() => ToggleActivoAsync(context.Id))" />
+                    }
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Delete"
+                                   Color="Color.Error" Title="Eliminar"
+                                   OnClick="@(() => ConfirmDeleteAsync(context))" />
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText Class="pa-4">No hay herramientas registradas.</MudText>
+            </NoRecordsContent>
+        </MudTable>
+    }
+</MudContainer>
+
+<MudMessageBox @ref="_deleteConfirmation" Title="Confirmar eliminación" CancelText="Cancelar">
+    <MessageContent>
+        ¿Estás seguro de que deseas eliminar la herramienta <strong>@_toolToDelete?.Name</strong>?
+        <br /><br />
+        <MudAlert Severity="Severity.Warning" Dense="true">
+            Esta acción no se puede deshacer.
+        </MudAlert>
+    </MessageContent>
+    <YesButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete">
+            Eliminar
+        </MudButton>
+    </YesButton>
+</MudMessageBox>
+
+@code {
+    [Inject] private IToolService ToolService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private bool _loading = true;
+    private List<ToolDto> _tools = [];
+    private MudMessageBox _deleteConfirmation = default!;
+    private ToolDto? _toolToDelete;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            _tools = (await ToolService.GetAllAsync()).ToList();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ToggleActivoAsync(Guid id)
+    {
+        var tool = _tools.First(t => t.Id == id);
+        var nuevoEstado = tool.Activo ? "desactivada" : "activada";
+        await ToolService.ToggleActivoAsync(id);
+        Snackbar.Add($"Herramienta {nuevoEstado}", MudBlazor.Severity.Success);
+        await LoadDataAsync();
+    }
+
+    private async Task ConfirmDeleteAsync(ToolDto tool)
+    {
+        _toolToDelete = tool;
+        var result = await _deleteConfirmation.ShowAsync();
+        if (result == true)
+        {
+            await DeleteAsync(tool.Id);
+        }
+        _toolToDelete = null;
+    }
+
+    private async Task DeleteAsync(Guid id)
+    {
+        try
+        {
+            await ToolService.DeleteAsync(id);
+            Snackbar.Add("Herramienta eliminada", MudBlazor.Severity.Success);
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", MudBlazor.Severity.Error);
+        }
+    }
+}

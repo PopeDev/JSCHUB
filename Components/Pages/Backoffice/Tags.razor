@@ -1,0 +1,154 @@
+@page "/backoffice/tags"
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@rendermode InteractiveServer
+
+<PageTitle>Tags - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h4">
+            <MudIcon Icon="@Icons.Material.Filled.Label" Class="mr-2" />
+            Tags
+        </MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   Href="/backoffice/tags/new">
+            Nuevo Tag
+        </MudButton>
+    </div>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else
+    {
+        <MudTable Items="_tags" Hover="true" Striped="true" Elevation="2">
+            <HeaderContent>
+                <MudTh>Nombre</MudTh>
+                <MudTh>Estado</MudTh>
+                <MudTh>Creado</MudTh>
+                <MudTh Style="width: 180px">Acciones</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary">@context.Name</MudChip>
+                </MudTd>
+                <MudTd>
+                    @if (context.Activo)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success">Activo</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default">Inactivo</MudChip>
+                    }
+                </MudTd>
+                <MudTd>
+                    <MudText Typo="Typo.body2">@context.CreadoEl.ToString("dd/MM/yyyy")</MudText>
+                </MudTd>
+                <MudTd>
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit"
+                                   Href="@($"/backoffice/tags/{context.Id}/edit")"
+                                   Title="Editar" />
+                    @if (context.Activo)
+                    {
+                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.VisibilityOff"
+                                       Color="Color.Warning" Title="Desactivar"
+                                       OnClick="@(() => ToggleActivoAsync(context.Id))" />
+                    }
+                    else
+                    {
+                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Visibility"
+                                       Color="Color.Success" Title="Activar"
+                                       OnClick="@(() => ToggleActivoAsync(context.Id))" />
+                    }
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Delete"
+                                   Color="Color.Error" Title="Eliminar"
+                                   OnClick="@(() => ConfirmDeleteAsync(context))" />
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText Class="pa-4">No hay tags registrados.</MudText>
+            </NoRecordsContent>
+        </MudTable>
+    }
+</MudContainer>
+
+<MudMessageBox @ref="_deleteConfirmation" Title="Confirmar eliminación" CancelText="Cancelar">
+    <MessageContent>
+        ¿Estás seguro de que deseas eliminar el tag <strong>@_tagToDelete?.Name</strong>?
+        <br /><br />
+        <MudAlert Severity="Severity.Warning" Dense="true">
+            Esta acción no se puede deshacer.
+        </MudAlert>
+    </MessageContent>
+    <YesButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete">
+            Eliminar
+        </MudButton>
+    </YesButton>
+</MudMessageBox>
+
+@code {
+    [Inject] private ITagService TagService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private bool _loading = true;
+    private List<TagDto> _tags = [];
+    private MudMessageBox _deleteConfirmation = default!;
+    private TagDto? _tagToDelete;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            _tags = (await TagService.GetAllAsync()).ToList();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ToggleActivoAsync(Guid id)
+    {
+        var tag = _tags.First(t => t.Id == id);
+        var nuevoEstado = tag.Activo ? "desactivado" : "activado";
+        await TagService.ToggleActivoAsync(id);
+        Snackbar.Add($"Tag {nuevoEstado}", MudBlazor.Severity.Success);
+        await LoadDataAsync();
+    }
+
+    private async Task ConfirmDeleteAsync(TagDto tag)
+    {
+        _tagToDelete = tag;
+        var result = await _deleteConfirmation.ShowAsync();
+        if (result == true)
+        {
+            await DeleteAsync(tag.Id);
+        }
+        _tagToDelete = null;
+    }
+
+    private async Task DeleteAsync(Guid id)
+    {
+        try
+        {
+            await TagService.DeleteAsync(id);
+            Snackbar.Add("Tag eliminado", MudBlazor.Severity.Success);
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", MudBlazor.Severity.Error);
+        }
+    }
+}

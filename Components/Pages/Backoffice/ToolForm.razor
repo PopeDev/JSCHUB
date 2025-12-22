@@ -1,0 +1,117 @@
+@page "/backoffice/tools/new"
+@page "/backoffice/tools/{Id:guid}/edit"
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@rendermode InteractiveServer
+
+<PageTitle>@(_isNew ? "Nueva Herramienta" : "Editar Herramienta") - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-4">
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.h5" Class="mb-4">
+            <MudIcon Icon="@(_isNew ? Icons.Material.Filled.Add : Icons.Material.Filled.Edit)" Class="mr-2" />
+            @(_isNew ? "Nueva Herramienta" : "Editar Herramienta")
+        </MudText>
+
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        }
+        else
+        {
+            <MudForm @ref="_form" @bind-IsValid="_formValid">
+                <MudTextField @bind-Value="_name" Label="Nombre" Required="true"
+                              RequiredError="El nombre es obligatorio"
+                              Placeholder="Ej: ChatGPT, Claude, Suno, Midjourney..."
+                              MaxLength="100" Class="mb-3" />
+
+                @if (!_isNew)
+                {
+                    <MudSwitch @bind-Value="_activo" Label="Activo" Color="Color.Success" Class="mb-4" />
+                }
+
+                <div class="d-flex gap-2 mt-4">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               OnClick="SaveAsync" Disabled="@(!_formValid || _saving)">
+                        @if (_saving)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        Guardar
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Href="/backoffice/tools">
+                        Cancelar
+                    </MudButton>
+                </div>
+            </MudForm>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    [Inject] private IToolService ToolService { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private MudForm _form = default!;
+    private bool _loading = true;
+    private bool _saving;
+    private bool _formValid;
+    private bool _isNew => !Id.HasValue;
+
+    private string _name = string.Empty;
+    private bool _activo = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!_isNew)
+        {
+            var tool = await ToolService.GetByIdAsync(Id!.Value);
+            if (tool == null)
+            {
+                Snackbar.Add("Herramienta no encontrada", MudBlazor.Severity.Error);
+                Navigation.NavigateTo("/backoffice/tools");
+                return;
+            }
+
+            _name = tool.Name;
+            _activo = tool.Activo;
+        }
+        _loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        await _form.Validate();
+        if (!_formValid) return;
+
+        _saving = true;
+        try
+        {
+            if (_isNew)
+            {
+                var dto = new CreateToolDto(_name);
+                await ToolService.CreateAsync(dto);
+                Snackbar.Add("Herramienta creada", MudBlazor.Severity.Success);
+            }
+            else
+            {
+                var dto = new UpdateToolDto(_name, _activo);
+                await ToolService.UpdateAsync(Id!.Value, dto);
+                Snackbar.Add("Herramienta actualizada", MudBlazor.Severity.Success);
+            }
+
+            Navigation.NavigateTo("/backoffice/tools");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", MudBlazor.Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

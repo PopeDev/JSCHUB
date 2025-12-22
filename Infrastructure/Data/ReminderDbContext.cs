@@ -32,6 +32,12 @@ public class ReminderDbContext : DbContext
     public DbSet<GastoProyecto> GastosProyectos => Set<GastoProyecto>();
     public DbSet<ReminderItemProyecto> ReminderItemsProyectos => Set<ReminderItemProyecto>();
 
+    // Módulo de Prompts
+    public DbSet<Tool> Tools => Set<Tool>();
+    public DbSet<Tag> Tags => Set<Tag>();
+    public DbSet<Prompt> Prompts => Set<Prompt>();
+    public DbSet<PromptTag> PromptTags => Set<PromptTag>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

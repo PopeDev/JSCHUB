@@ -1,0 +1,261 @@
+@page "/backoffice/prompts"
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@rendermode InteractiveServer
+
+<PageTitle>Prompts - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h4">
+            <MudIcon Icon="@Icons.Material.Filled.Chat" Class="mr-2" />
+            Prompts
+        </MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   Href="/backoffice/prompts/new">
+            Nuevo Prompt
+        </MudButton>
+    </div>
+
+    <MudPaper Class="pa-3 mb-4" Elevation="1">
+        <MudGrid>
+            <MudItem xs="12" sm="4">
+                <MudTextField @bind-Value="_searchText" Label="Buscar" Immediate="true"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                              OnKeyDown="@OnSearchKeyDown" />
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudSelect @bind-Value="_selectedToolId" Label="Herramienta" Clearable="true">
+                    @foreach (var tool in _tools)
+                    {
+                        <MudSelectItem Value="@tool.Id">@tool.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudSelect @bind-Value="_selectedTagId" Label="Tag" Clearable="true">
+                    @foreach (var tag in _tags)
+                    {
+                        <MudSelectItem Value="@tag.Id">@tag.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="2" Class="d-flex align-end">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SearchAsync" Class="mr-2">
+                    Buscar
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" OnClick="ClearFilters">
+                    Limpiar
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else
+    {
+        <MudTable Items="_prompts" Hover="true" Striped="true" Elevation="2">
+            <HeaderContent>
+                <MudTh>Título</MudTh>
+                <MudTh>Herramienta</MudTh>
+                <MudTh>Proyecto</MudTh>
+                <MudTh>Creado por</MudTh>
+                <MudTh>Tags</MudTh>
+                <MudTh>Estado</MudTh>
+                <MudTh Style="width: 180px">Acciones</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    <MudText Typo="Typo.body1" Class="font-weight-bold">@context.Title</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                        @(context.Description.Length > 80 ? context.Description[..80] + "..." : context.Description)
+                    </MudText>
+                </MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary">@context.ToolName</MudChip>
+                </MudTd>
+                <MudTd>
+                    @if (!string.IsNullOrEmpty(context.ProyectoNombre))
+                    {
+                        <MudText Typo="Typo.body2">@context.ProyectoNombre</MudText>
+                    }
+                    else
+                    {
+                        <span class="mud-text-secondary">-</span>
+                    }
+                </MudTd>
+                <MudTd>
+                    <MudText Typo="Typo.body2">@context.CreatedByUserNombre</MudText>
+                </MudTd>
+                <MudTd>
+                    @foreach (var tag in context.Tags.Take(3))
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="ma-1">@tag.Name</MudChip>
+                    }
+                    @if (context.Tags.Count() > 3)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default">+@(context.Tags.Count() - 3)</MudChip>
+                    }
+                </MudTd>
+                <MudTd>
+                    @if (context.Activo)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success">Activo</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default">Inactivo</MudChip>
+                    }
+                </MudTd>
+                <MudTd>
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Visibility"
+                                   Href="@($"/backoffice/prompts/{context.Id}")"
+                                   Title="Ver detalle" />
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit"
+                                   Href="@($"/backoffice/prompts/{context.Id}/edit")"
+                                   Title="Editar" />
+                    @if (context.Activo)
+                    {
+                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.VisibilityOff"
+                                       Color="Color.Warning" Title="Desactivar"
+                                       OnClick="@(() => ToggleActivoAsync(context.Id))" />
+                    }
+                    else
+                    {
+                        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Visibility"
+                                       Color="Color.Success" Title="Activar"
+                                       OnClick="@(() => ToggleActivoAsync(context.Id))" />
+                    }
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Delete"
+                                   Color="Color.Error" Title="Eliminar"
+                                   OnClick="@(() => ConfirmDeleteAsync(context))" />
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText Class="pa-4">No hay prompts registrados.</MudText>
+            </NoRecordsContent>
+        </MudTable>
+    }
+</MudContainer>
+
+<MudMessageBox @ref="_deleteConfirmation" Title="Confirmar eliminación" CancelText="Cancelar">
+    <MessageContent>
+        ¿Estás seguro de que deseas eliminar el prompt <strong>@_promptToDelete?.Title</strong>?
+        <br /><br />
+        <MudAlert Severity="Severity.Warning" Dense="true">
+            Esta acción no se puede deshacer.
+        </MudAlert>
+    </MessageContent>
+    <YesButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete">
+            Eliminar
+        </MudButton>
+    </YesButton>
+</MudMessageBox>
+
+@code {
+    [Inject] private IPromptService PromptService { get; set; } = default!;
+    [Inject] private IToolService ToolService { get; set; } = default!;
+    [Inject] private ITagService TagService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private bool _loading = true;
+    private List<PromptDto> _prompts = [];
+    private List<ToolDto> _tools = [];
+    private List<TagDto> _tags = [];
+    private MudMessageBox _deleteConfirmation = default!;
+    private PromptDto? _promptToDelete;
+
+    private string? _searchText;
+    private Guid? _selectedToolId;
+    private Guid? _selectedTagId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFiltersAsync();
+        await LoadDataAsync();
+    }
+
+    private async Task LoadFiltersAsync()
+    {
+        _tools = (await ToolService.GetActivosAsync()).ToList();
+        _tags = (await TagService.GetActivosAsync()).ToList();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            _prompts = (await PromptService.SearchAsync(
+                searchText: _searchText,
+                toolId: _selectedToolId,
+                tagId: _selectedTagId,
+                incluirInactivos: true
+            )).ToList();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task SearchAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task ClearFilters()
+    {
+        _searchText = null;
+        _selectedToolId = null;
+        _selectedTagId = null;
+        await LoadDataAsync();
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchAsync();
+        }
+    }
+
+    private async Task ToggleActivoAsync(Guid id)
+    {
+        var prompt = _prompts.First(p => p.Id == id);
+        var nuevoEstado = prompt.Activo ? "desactivado" : "activado";
+        await PromptService.ToggleActivoAsync(id);
+        Snackbar.Add($"Prompt {nuevoEstado}", MudBlazor.Severity.Success);
+        await LoadDataAsync();
+    }
+
+    private async Task ConfirmDeleteAsync(PromptDto prompt)
+    {
+        _promptToDelete = prompt;
+        var result = await _deleteConfirmation.ShowAsync();
+        if (result == true)
+        {
+            await DeleteAsync(prompt.Id);
+        }
+        _promptToDelete = null;
+    }
+
+    private async Task DeleteAsync(Guid id)
+    {
+        try
+        {
+            await PromptService.DeleteAsync(id);
+            Snackbar.Add("Prompt eliminado", MudBlazor.Severity.Success);
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", MudBlazor.Severity.Error);
+        }
+    }
+}

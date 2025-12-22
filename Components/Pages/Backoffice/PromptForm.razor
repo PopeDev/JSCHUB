@@ -1,0 +1,207 @@
+@page "/backoffice/prompts/new"
+@page "/backoffice/prompts/{Id:guid}/edit"
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@rendermode InteractiveServer
+
+<PageTitle>@(_isNew ? "Nuevo Prompt" : "Editar Prompt") - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.h5" Class="mb-4">
+            <MudIcon Icon="@(_isNew ? Icons.Material.Filled.Add : Icons.Material.Filled.Edit)" Class="mr-2" />
+            @(_isNew ? "Nuevo Prompt" : "Editar Prompt")
+        </MudText>
+
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        }
+        else
+        {
+            <MudForm @ref="_form" @bind-IsValid="_formValid">
+                <MudTextField @bind-Value="_title" Label="Título" Required="true"
+                              RequiredError="El título es obligatorio"
+                              MaxLength="200" Class="mb-3" />
+
+                <MudTextField @bind-Value="_description" Label="Descripción / Contenido del Prompt" Required="true"
+                              RequiredError="La descripción es obligatoria"
+                              Lines="8" Class="mb-3" />
+
+                <MudSelect @bind-Value="_toolId" Label="Herramienta" Required="true"
+                           RequiredError="La herramienta es obligatoria" Class="mb-3">
+                    @foreach (var tool in _tools)
+                    {
+                        <MudSelectItem Value="@tool.Id">@tool.Name</MudSelectItem>
+                    }
+                </MudSelect>
+
+                @if (_isNew)
+                {
+                    <MudSelect @bind-Value="_createdByUserId" Label="Creado por" Required="true"
+                               RequiredError="El usuario es obligatorio" Class="mb-3">
+                        @foreach (var user in _users)
+                        {
+                            <MudSelectItem Value="@user.Id">@user.Nombre</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+                else
+                {
+                    <MudTextField Value="@_createdByUserName" Label="Creado por" ReadOnly="true" Class="mb-3" />
+                }
+
+                <MudSelect @bind-Value="_proyectoId" Label="Proyecto (opcional)" Clearable="true" Class="mb-3">
+                    @foreach (var proyecto in _proyectos)
+                    {
+                        <MudSelectItem Value="@proyecto.Id">@proyecto.Nombre</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudSelect T="Guid" Label="Tags" MultiSelection="true" @bind-SelectedValues="_selectedTagIds" Class="mb-3">
+                    @foreach (var tag in _tags)
+                    {
+                        <MudSelectItem T="Guid" Value="@tag.Id">@tag.Name</MudSelectItem>
+                    }
+                </MudSelect>
+
+                @if (!_isNew)
+                {
+                    <MudSwitch @bind-Value="_activo" Label="Activo" Color="Color.Success" Class="mb-4" />
+                }
+
+                <div class="d-flex gap-2 mt-4">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               OnClick="SaveAsync" Disabled="@(!_formValid || _saving)">
+                        @if (_saving)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        Guardar
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Href="/backoffice/prompts">
+                        Cancelar
+                    </MudButton>
+                </div>
+            </MudForm>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    [Inject] private IPromptService PromptService { get; set; } = default!;
+    [Inject] private IToolService ToolService { get; set; } = default!;
+    [Inject] private ITagService TagService { get; set; } = default!;
+    [Inject] private IUsuarioService UsuarioService { get; set; } = default!;
+    [Inject] private IProyectoService ProyectoService { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private MudForm _form = default!;
+    private bool _loading = true;
+    private bool _saving;
+    private bool _formValid;
+    private bool _isNew => !Id.HasValue;
+
+    private string _title = string.Empty;
+    private string _description = string.Empty;
+    private Guid _toolId;
+    private Guid _createdByUserId;
+    private string _createdByUserName = string.Empty;
+    private Guid? _proyectoId;
+    private IEnumerable<Guid> _selectedTagIds = [];
+    private bool _activo = true;
+
+    private List<ToolDto> _tools = [];
+    private List<TagDto> _tags = [];
+    private List<UsuarioDto> _users = [];
+    private List<ProyectoDto> _proyectos = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCatalogsAsync();
+
+        if (!_isNew)
+        {
+            var prompt = await PromptService.GetByIdAsync(Id!.Value);
+            if (prompt == null)
+            {
+                Snackbar.Add("Prompt no encontrado", MudBlazor.Severity.Error);
+                Navigation.NavigateTo("/backoffice/prompts");
+                return;
+            }
+
+            _title = prompt.Title;
+            _description = prompt.Description;
+            _toolId = prompt.ToolId;
+            _createdByUserId = prompt.CreatedByUserId;
+            _createdByUserName = prompt.CreatedByUserNombre;
+            _proyectoId = prompt.ProyectoId;
+            _selectedTagIds = prompt.Tags.Select(t => t.Id).ToList();
+            _activo = prompt.Activo;
+        }
+        else if (_users.Any())
+        {
+            _createdByUserId = _users.First().Id;
+        }
+
+        _loading = false;
+    }
+
+    private async Task LoadCatalogsAsync()
+    {
+        _tools = (await ToolService.GetActivosAsync()).ToList();
+        _tags = (await TagService.GetActivosAsync()).ToList();
+        _users = (await UsuarioService.GetActivosAsync()).ToList();
+        _proyectos = (await ProyectoService.GetAllAsync()).ToList();
+    }
+
+    private async Task SaveAsync()
+    {
+        await _form.Validate();
+        if (!_formValid) return;
+
+        _saving = true;
+        try
+        {
+            if (_isNew)
+            {
+                var dto = new CreatePromptDto(
+                    _title,
+                    _description,
+                    _proyectoId,
+                    _createdByUserId,
+                    _toolId,
+                    _selectedTagIds.ToList()
+                );
+                await PromptService.CreateAsync(dto);
+                Snackbar.Add("Prompt creado", MudBlazor.Severity.Success);
+            }
+            else
+            {
+                var dto = new UpdatePromptDto(
+                    _title,
+                    _description,
+                    _proyectoId,
+                    _toolId,
+                    _selectedTagIds.ToList(),
+                    _activo
+                );
+                await PromptService.UpdateAsync(Id!.Value, dto);
+                Snackbar.Add("Prompt actualizado", MudBlazor.Severity.Success);
+            }
+
+            Navigation.NavigateTo("/backoffice/prompts");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", MudBlazor.Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}
