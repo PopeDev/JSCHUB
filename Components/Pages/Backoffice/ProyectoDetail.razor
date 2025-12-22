@@ -48,6 +48,12 @@
                 </MudStack>
 
                 <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Tertiary"
+                               StartIcon="@Icons.Material.Filled.Dashboard"
+                               Href="@($"/backoffice/proyectos/{Id}/pizarra")">
+                        Pizarra
+                    </MudButton>
                     @if (!string.IsNullOrWhiteSpace(_proyecto.EnlacePrincipal))
                     {
                         <MudButton Variant="Variant.Filled"
