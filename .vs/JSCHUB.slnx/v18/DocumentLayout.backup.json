@@ -1,7 +1,12 @@
 {
   "Version": 1,
   "WorkspaceRootPath": "C:\\SOURCE\\JSCHub\\JSCHUB\\",
-  "Documents": [],
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{FAFE738A-E865-9CD1-24F8-559AFE3135AD}|JSCHUB.csproj|c:\\source\\jschub\\jschub\\components\\pages\\backoffice\\proyectos.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{FAFE738A-E865-9CD1-24F8-559AFE3135AD}|JSCHUB.csproj|solutionrelative:components\\pages\\backoffice\\proyectos.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    }
+  ],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
@@ -51,7 +56,7 @@
         },
         {
           "DockedWidth": 9,
-          "SelectedChildIndex": -1,
+          "SelectedChildIndex": 5,
           "Children": [
             {
               "$type": "Bookmark",
@@ -72,6 +77,19 @@
             {
               "$type": "Bookmark",
               "Name": "ST:1:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Proyectos.razor",
+              "DocumentMoniker": "C:\\SOURCE\\JSCHub\\JSCHUB\\Components\\Pages\\Backoffice\\Proyectos.razor",
+              "RelativeDocumentMoniker": "Components\\Pages\\Backoffice\\Proyectos.razor",
+              "ToolTip": "C:\\SOURCE\\JSCHub\\JSCHUB\\Components\\Pages\\Backoffice\\Proyectos.razor",
+              "RelativeToolTip": "Components\\Pages\\Backoffice\\Proyectos.razor",
+              "ViewState": "AgIAABwBAAAAAAAAAAAQwCkBAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-12-22T09:28:58.509Z",
+              "EditorCaption": ""
             }
           ]
         }

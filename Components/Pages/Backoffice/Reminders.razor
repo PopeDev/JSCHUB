@@ -29,7 +29,7 @@
                               DebounceInterval="300" OnDebounceIntervalElapsed="LoadDataAsync" />
             </MudItem>
             <MudItem xs="6" sm="2">
-                <MudSelect T="Category?" @bind-Value="_filterCategory" Label="Categoría" Clearable="true"
+                <MudSelect T="Category?" Value="_filterCategory" Label="Categoría" Clearable="true"
                            Variant="Variant.Outlined" Dense="true"
                            ValueChanged="@(async (Category? c) => { _filterCategory = c; await LoadDataAsync(); })">
                     <MudSelectItem Value="@((Category?)Category.Renewal)">Renovación</MudSelectItem>
@@ -38,7 +38,7 @@
                 </MudSelect>
             </MudItem>
             <MudItem xs="6" sm="2">
-                <MudSelect T="ItemStatus?" @bind-Value="_filterStatus" Label="Estado" Clearable="true"
+                <MudSelect T="ItemStatus?" Value="_filterStatus" Label="Estado" Clearable="true"
                            Variant="Variant.Outlined" Dense="true"
                            ValueChanged="@(async (ItemStatus? s) => { _filterStatus = s; await LoadDataAsync(); })">
                     <MudSelectItem Value="@((ItemStatus?)ItemStatus.Active)">Activo</MudSelectItem>

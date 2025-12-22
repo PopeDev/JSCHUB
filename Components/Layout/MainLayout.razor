@@ -5,7 +5,7 @@
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 
-<MudThemeProvider @ref="_themeProvider" @bind-IsDarkMode="_isDarkMode" />
+<MudThemeProvider @ref="_themeProvider" @bind-IsDarkMode="_isDarkMode" Theme="_customTheme" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
@@ -67,6 +67,24 @@
     private MudThemeProvider _themeProvider = default!;
     private bool _isDarkMode = false;
     private bool _drawerOpen = true;
+
+    private readonly MudTheme _customTheme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#04787C",
+            PrimaryDarken = "#236668",
+            PrimaryLighten = "#07ABB0",
+            AppbarBackground = "#04787C"
+        },
+        PaletteDark = new PaletteDark
+        {
+            Primary = "#07ABB0", // Lighten for dark mode
+            PrimaryDarken = "#04787C",
+            PrimaryLighten = "#236668",
+            AppbarBackground = "#1E1E1E" // Keep dark for dark mode appbar or match primary if preferred. defaulting to standard dark.
+        }
+    };
 
     protected override void OnInitialized()
     {

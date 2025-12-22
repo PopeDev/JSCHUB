@@ -2,7 +2,9 @@
 @using JSCHUB.Application.Interfaces
 @inject IAuthService AuthService
 @inject ICurrentUserService CurrentUser
+
 @inject NavigationManager Navigation
+@rendermode InteractiveServer
 
 <PageTitle>Iniciar sesión - JSCHUB</PageTitle>
 
@@ -46,6 +48,12 @@
                         @_errorMessage
                     </MudAlert>
                 }
+                @if (!string.IsNullOrEmpty(_debugMessage))
+                {
+                   <MudAlert Severity="Severity.Info" Class="mb-3" Dense="true">
+                       @_debugMessage
+                   </MudAlert>
+                }
             </MudForm>
         </MudCardContent>
         <MudCardActions Class="d-flex justify-center">
@@ -53,7 +61,7 @@
                        Color="Color.Primary"
                        Size="Size.Large"
                        FullWidth="true"
-                       Disabled="@(!_formValid || _loading)"
+                       Disabled="@(_loading)"
                        OnClick="HandleLogin">
                 @if (_loading)
                 {
@@ -71,6 +79,7 @@
     private string _username = "Pope";
     private string _password = "00000";
     private string? _errorMessage;
+    private string? _debugMessage;
     private bool _showPassword;
     private bool _loading;
 
@@ -84,6 +93,15 @@
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await _form.Validate();
+            StateHasChanged();
+        }
+    }
+
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter" && _formValid && !_loading)
@@ -94,7 +112,13 @@
 
     private async Task HandleLogin()
     {
-        if (!_formValid || _loading) return;
+        _debugMessage = "Procesando...";
+        await _form.Validate();
+        if (!_form.IsValid || _loading)
+        {
+             _debugMessage = "Formulario inválido";
+             return;
+        }
 
         _loading = true;
         _errorMessage = null;
@@ -102,14 +126,19 @@
         try
         {
             var result = await AuthService.LoginAsync(_username, _password);
+            
+            _debugMessage = $"Resultado login: {result.Success}";
 
             if (result.Success)
             {
-                Navigation.NavigateTo("/backoffice/monitor", forceLoad: true);
+                _debugMessage = "Redirigiendo...";
+                await Task.Delay(500);
+                Navigation.NavigateTo("/backoffice/monitor");
             }
             else
             {
                 _errorMessage = result.ErrorMessage ?? "Usuario o contraseña incorrectos";
+                _debugMessage = $"Error: {_errorMessage}";
             }
         }
         finally

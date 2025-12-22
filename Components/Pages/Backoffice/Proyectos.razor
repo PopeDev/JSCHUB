@@ -33,7 +33,7 @@
             </MudItem>
             <MudItem xs="12" sm="6" md="3">
                 <MudSelect T="EstadoProyecto?"
-                           @bind-Value="_estadoFiltro"
+                           Value="_estadoFiltro"
                            Label="Estado"
                            Clearable="true"
                            AnchorOrigin="Origin.BottomCenter"
@@ -45,7 +45,7 @@
             </MudItem>
             <MudItem xs="12" sm="6" md="3">
                 <MudSwitch T="bool"
-                           @bind-Value="_incluirArchivados"
+                           Value="_incluirArchivados"
                            Label="Incluir archivados"
                            Color="Color.Primary"
                            ValueChanged="@(async (bool v) => { _incluirArchivados = v; await LoadDataAsync(); })" />
