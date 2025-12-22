@@ -228,6 +228,121 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                     b.ToTable("gastos", (string)null);
                 });
 
+            modelBuilder.Entity("JSCHUB.Domain.Entities.KanbanColumn", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreadoEl")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreadoPor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("ModificadoEl")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ModificadoPor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Posicion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<Guid>("ProyectoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProyectoId");
+
+                    b.HasIndex("ProyectoId", "Posicion");
+
+                    b.ToTable("kanban_columnas", (string)null);
+                });
+
+            modelBuilder.Entity("JSCHUB.Domain.Entities.KanbanTask", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AsignadoAId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ColumnaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreadoEl")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreadoPor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<decimal>("HorasEstimadas")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(8, 2)
+                        .HasColumnType("numeric(8,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<DateTime>("ModificadoEl")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ModificadoPor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Posicion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("Prioridad")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("ProyectoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AsignadoAId");
+
+                    b.HasIndex("ColumnaId");
+
+                    b.HasIndex("Prioridad");
+
+                    b.HasIndex("ProyectoId");
+
+                    b.HasIndex("ColumnaId", "Posicion");
+
+                    b.ToTable("kanban_tareas", (string)null);
+                });
+
             modelBuilder.Entity("JSCHUB.Domain.Entities.Proyecto", b =>
                 {
                     b.Property<Guid>("Id")
@@ -508,6 +623,43 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                     b.Navigation("PagadoPor");
                 });
 
+            modelBuilder.Entity("JSCHUB.Domain.Entities.KanbanColumn", b =>
+                {
+                    b.HasOne("JSCHUB.Domain.Entities.Proyecto", "Proyecto")
+                        .WithMany()
+                        .HasForeignKey("ProyectoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Proyecto");
+                });
+
+            modelBuilder.Entity("JSCHUB.Domain.Entities.KanbanTask", b =>
+                {
+                    b.HasOne("JSCHUB.Domain.Entities.Usuario", "AsignadoA")
+                        .WithMany()
+                        .HasForeignKey("AsignadoAId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("JSCHUB.Domain.Entities.KanbanColumn", "Columna")
+                        .WithMany("Tareas")
+                        .HasForeignKey("ColumnaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("JSCHUB.Domain.Entities.Proyecto", "Proyecto")
+                        .WithMany()
+                        .HasForeignKey("ProyectoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AsignadoA");
+
+                    b.Navigation("Columna");
+
+                    b.Navigation("Proyecto");
+                });
+
             modelBuilder.Entity("JSCHUB.Domain.Entities.RecursoProyecto", b =>
                 {
                     b.HasOne("JSCHUB.Domain.Entities.Proyecto", "Proyecto")
@@ -517,6 +669,11 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Proyecto");
+                });
+
+            modelBuilder.Entity("JSCHUB.Domain.Entities.KanbanColumn", b =>
+                {
+                    b.Navigation("Tareas");
                 });
 
             modelBuilder.Entity("JSCHUB.Domain.Entities.Proyecto", b =>

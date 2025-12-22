@@ -44,22 +44,23 @@ public record UpdateKanbanColumnDto(
 /// <summary>
 /// DTO de lectura para una tarea Kanban
 /// </summary>
-public record KanbanTaskDto(
-    Guid Id,
-    Guid ProyectoId,
-    Guid ColumnaId,
-    string Titulo,
-    string? Descripcion,
-    Guid? AsignadoAId,
-    string? AsignadoANombre,
-    PrioridadTarea Prioridad,
-    decimal HorasEstimadas,
-    int Posicion,
-    string CreadoPor,
-    DateTime CreadoEl,
-    string ModificadoPor,
-    DateTime ModificadoEl
-);
+public class KanbanTaskDto
+{
+    public Guid Id { get; set; }
+    public Guid ProyectoId { get; set; }
+    public Guid ColumnaId { get; set; }
+    public string Titulo { get; set; } = string.Empty;
+    public string? Descripcion { get; set; }
+    public Guid? AsignadoAId { get; set; }
+    public string? AsignadoANombre { get; set; }
+    public PrioridadTarea Prioridad { get; set; }
+    public decimal HorasEstimadas { get; set; }
+    public int Posicion { get; set; }
+    public string CreadoPor { get; set; } = string.Empty;
+    public DateTime CreadoEl { get; set; }
+    public string ModificadoPor { get; set; } = string.Empty;
+    public DateTime ModificadoEl { get; set; }
+}
 
 /// <summary>
 /// DTO para crear una tarea Kanban

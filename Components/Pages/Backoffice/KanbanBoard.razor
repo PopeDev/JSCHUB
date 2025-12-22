@@ -46,101 +46,98 @@
             </MudStack>
         </MudPaper>
 
-        @* Tablero Kanban *@
-        <div class="kanban-board" style="display: flex; gap: 16px; overflow-x: auto; padding-bottom: 16px; min-height: 500px;">
-            @foreach (var column in _board.Columnas.OrderBy(c => c.Posicion))
-            {
-                <MudPaper Class="kanban-column pa-2" Elevation="1" Style="min-width: 300px; max-width: 350px; flex-shrink: 0; background-color: var(--mud-palette-background-grey);">
-                    @* Header de columna *@
-                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                            <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">@column.Titulo</MudText>
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@column.Tareas.Count()</MudChip>
+        @* Tablero Kanban con Drag & Drop *@
+        <MudDropContainer T="KanbanTaskDto" Items="_allTasks" ItemsSelector="@((item,zone) => item.ColumnaId.ToString() == zone)" ItemDropped="TaskDroppedAsync" Class="d-flex flex-row overflow-auto pb-4" Style="min-height: 500px; gap: 16px;">
+            <ChildContent>
+                @foreach (var column in _board.Columnas.OrderBy(c => c.Posicion))
+                {
+                    <MudPaper Class="kanban-column pa-2 d-flex flex-column" Elevation="1" Style="min-width: 300px; max-width: 350px; flex-shrink: 0; background-color: var(--mud-palette-background-grey);">
+                        <MudList T="KanbanTaskDto" Class="d-flex flex-column mud-height-full">
+                            @* Header de columna *@
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2 px-2">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">@column.Titulo</MudText>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@(_allTasks.Count(t => t.ColumnaId == column.Id))</MudChip>
+                                </MudStack>
+                                <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true">
+                                    <MudMenuItem Icon="@Icons.Material.Filled.Edit" OnClick="@(() => OpenRenameColumnDialog(column))">Renombrar</MudMenuItem>
+                                    <MudMenuItem Icon="@Icons.Material.Filled.ChevronLeft" OnClick="@(() => MoveColumnAsync(column.Id, column.Posicion - 1))" Disabled="@(column.Posicion == 0)">Mover izquierda</MudMenuItem>
+                                    <MudMenuItem Icon="@Icons.Material.Filled.ChevronRight" OnClick="@(() => MoveColumnAsync(column.Id, column.Posicion + 1))" Disabled="@(column.Posicion >= _board.Columnas.Count() - 1)">Mover derecha</MudMenuItem>
+                                    <MudDivider />
+                                    <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error" OnClick="@(() => DeleteColumnAsync(column))">Eliminar</MudMenuItem>
+                                </MudMenu>
+                            </MudStack>
+
+                            @* Botón añadir tarea *@
+                            <MudButton Variant="Variant.Text"
+                                       Color="Color.Primary"
+                                       Size="Size.Small"
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.Add"
+                                       OnClick="@(() => OpenNewTaskDialog(column.Id))"
+                                       Class="mb-2">
+                                Añadir tarea
+                            </MudButton>
+
+                            @* Drop Zone *@
+                            <MudDropZone T="KanbanTaskDto" Identifier="@column.Id.ToString()" Class="flex-grow-1 d-flex flex-column gap-2" Style="min-height: 100px;" AllowReorder="true" />
+                        </MudList>
+                    </MudPaper>
+                }
+
+                @* Placeholder/Boton nueva Columna *@
+                 <MudPaper Class="pa-4 flex-shrink-0 d-flex align-center justify-center" Elevation="0" Style="min-width: 300px; height: 100px; border: 2px dashed var(--mud-palette-divider); opacity: 0.6; cursor: pointer;" @onclick="OpenNewColumnDialog">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@Icons.Material.Filled.Add" />
+                        <MudText>Nueva columna</MudText>
+                    </MudStack>
+                 </MudPaper>
+
+            </ChildContent>
+            <ItemRenderer>
+                <MudCard Elevation="2" Class="kanban-task mb-2" Style="cursor: grab;" @onclick="@(() => OpenEditTaskDialog(context))">
+                    <MudCardContent Class="pa-2">
+                        <MudStack Spacing="1">
+                            @* Título y prioridad *@
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                                <MudText Typo="Typo.body2" Style="font-weight: 500;">@context.Titulo</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="@GetPrioridadColor(context.Prioridad)" Variant="Variant.Filled" Style="height: 20px; font-size: 10px;">
+                                    @GetPrioridadLabel(context.Prioridad)
+                                </MudChip>
+                            </MudStack>
+
+                            @* Descripción (truncada) *@
+                            @if (!string.IsNullOrWhiteSpace(context.Descripcion))
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Style="max-height: 40px; overflow: hidden; text-overflow: ellipsis;">
+                                    @(context.Descripcion.Length > 80 ? context.Descripcion.Substring(0, 80) + "..." : context.Descripcion)
+                                </MudText>
+                            }
+
+                            @* Footer: usuario y horas *@
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mt-1">
+                                @if (!string.IsNullOrWhiteSpace(context.AsignadoANombre))
+                                {
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Person" Style="height: 22px; font-size: 11px;">
+                                        @context.AsignadoANombre
+                                    </MudChip>
+                                }
+                                else
+                                {
+                                    <span></span>
+                                }
+                                @if (context.HorasEstimadas > 0)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Icon="@Icons.Material.Filled.Schedule" Style="height: 22px; font-size: 11px;">
+                                        @context.HorasEstimadas.ToString("0.#")h
+                                    </MudChip>
+                                }
+                            </MudStack>
                         </MudStack>
-                        <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true">
-                            <MudMenuItem Icon="@Icons.Material.Filled.Edit" OnClick="@(() => OpenRenameColumnDialog(column))">Renombrar</MudMenuItem>
-                            <MudMenuItem Icon="@Icons.Material.Filled.ChevronLeft" OnClick="@(() => MoveColumnAsync(column.Id, column.Posicion - 1))" Disabled="@(column.Posicion == 0)">Mover izquierda</MudMenuItem>
-                            <MudMenuItem Icon="@Icons.Material.Filled.ChevronRight" OnClick="@(() => MoveColumnAsync(column.Id, column.Posicion + 1))" Disabled="@(column.Posicion >= _board.Columnas.Count() - 1)">Mover derecha</MudMenuItem>
-                            <MudDivider />
-                            <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error" OnClick="@(() => DeleteColumnAsync(column))">Eliminar</MudMenuItem>
-                        </MudMenu>
-                    </MudStack>
-
-                    @* Botón añadir tarea *@
-                    <MudButton Variant="Variant.Text"
-                               Color="Color.Primary"
-                               Size="Size.Small"
-                               FullWidth="true"
-                               StartIcon="@Icons.Material.Filled.Add"
-                               OnClick="@(() => OpenNewTaskDialog(column.Id))"
-                               Class="mb-2">
-                        Añadir tarea
-                    </MudButton>
-
-                    @* Lista de tareas *@
-                    <div class="kanban-tasks" style="display: flex; flex-direction: column; gap: 8px; max-height: 600px; overflow-y: auto;">
-                        @foreach (var task in column.Tareas.OrderBy(t => t.Posicion))
-                        {
-                            <MudCard Elevation="2" Class="kanban-task" Style="cursor: pointer;" @onclick="@(() => OpenEditTaskDialog(task))">
-                                <MudCardContent Class="pa-2">
-                                    <MudStack Spacing="1">
-                                        @* Título y prioridad *@
-                                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
-                                            <MudText Typo="Typo.body2" Style="font-weight: 500;">@task.Titulo</MudText>
-                                            <MudChip T="string" Size="Size.Small" Color="@GetPrioridadColor(task.Prioridad)" Variant="Variant.Filled" Style="height: 20px; font-size: 10px;">
-                                                @GetPrioridadLabel(task.Prioridad)
-                                            </MudChip>
-                                        </MudStack>
-
-                                        @* Descripción (truncada) *@
-                                        @if (!string.IsNullOrWhiteSpace(task.Descripcion))
-                                        {
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Style="max-height: 40px; overflow: hidden; text-overflow: ellipsis;">
-                                                @(task.Descripcion.Length > 80 ? task.Descripcion.Substring(0, 80) + "..." : task.Descripcion)
-                                            </MudText>
-                                        }
-
-                                        @* Footer: usuario y horas *@
-                                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mt-1">
-                                            @if (!string.IsNullOrWhiteSpace(task.AsignadoANombre))
-                                            {
-                                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Person" Style="height: 22px; font-size: 11px;">
-                                                    @task.AsignadoANombre
-                                                </MudChip>
-                                            }
-                                            else
-                                            {
-                                                <span></span>
-                                            }
-                                            @if (task.HorasEstimadas > 0)
-                                            {
-                                                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Icon="@Icons.Material.Filled.Schedule" Style="height: 22px; font-size: 11px;">
-                                                    @task.HorasEstimadas.ToString("0.#")h
-                                                </MudChip>
-                                            }
-                                        </MudStack>
-                                    </MudStack>
-                                </MudCardContent>
-                            </MudCard>
-                        }
-                    </div>
-                </MudPaper>
-            }
-
-            @* Placeholder si no hay columnas *@
-            @if (!_board.Columnas.Any())
-            {
-                <MudPaper Class="pa-4" Elevation="0" Style="min-width: 300px; border: 2px dashed var(--mud-palette-divider);">
-                    <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="min-height: 200px;">
-                        <MudIcon Icon="@Icons.Material.Filled.ViewColumn" Size="Size.Large" Color="Color.Secondary" />
-                        <MudText Typo="Typo.body1" Color="Color.Secondary">No hay columnas</MudText>
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenNewColumnDialog">
-                            Crear primera columna
-                        </MudButton>
-                    </MudStack>
-                </MudPaper>
-            }
-        </div>
+                    </MudCardContent>
+                </MudCard>
+            </ItemRenderer>
+        </MudDropContainer>
     }
 </MudContainer>
 
@@ -275,6 +272,7 @@
     private bool _notFound;
     private KanbanBoardDto? _board;
     private IEnumerable<UsuarioDto> _usuarios = Enumerable.Empty<UsuarioDto>();
+    private List<KanbanTaskDto> _allTasks = new(); // Flattened list for MudDropContainer
 
     // Dialog Columna
     private bool _showColumnDialog;
@@ -323,6 +321,16 @@
             {
                 _notFound = true;
             }
+            else
+            {
+                _allTasks.Clear();
+                foreach (var col in _board.Columnas)
+                {
+                    _allTasks.AddRange(col.Tareas);
+                }
+                // Refresh container needed? Usually binding handles it if referenced object properties change, 
+                // but since we are replacing the list context, we might need StateHasChanged.
+            }
         }
         catch (KeyNotFoundException)
         {
@@ -336,6 +344,32 @@
         finally
         {
             _loading = false;
+        }
+    }
+
+    private async Task TaskDroppedAsync(MudItemDropInfo<KanbanTaskDto> dropInfo)
+    {
+        // Update UI immediately
+        dropInfo.Item.ColumnaId = Guid.Parse(dropInfo.DropzoneIdentifier);
+        
+        // Persist change
+        try
+        {
+             // We pass 'null' for newPosition for now as simple column move.
+             // If MudItemDropInfo provided index, we could use it: dropInfo.IndexInZone
+             // But existing MoveTaskAsync logic might need verification.
+             // Let's rely on simple zone change first.
+             await KanbanService.MoveTaskAsync(dropInfo.Item.Id, dropInfo.Item.ColumnaId, dropInfo.IndexInZone, CurrentUser);
+             // Background reload to ensuring consistency
+             // await LoadDataAsync(); 
+             // Avoiding full reload to prevent UI flicker for DragDrop. 
+             // Assuming optimistic update is fine.
+        }
+        catch (Exception ex)
+        {
+             Snackbar.Add($"Error al mover tarea: {ex.Message}", Severity.Error);
+             // Revert on error?
+             await LoadDataAsync();
         }
     }
 

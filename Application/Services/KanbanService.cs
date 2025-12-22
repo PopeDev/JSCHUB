@@ -328,20 +328,21 @@ public class KanbanService : IKanbanService
         c.Tareas?.OrderBy(t => t.Posicion).Select(MapTaskToDto) ?? Enumerable.Empty<KanbanTaskDto>()
     );
 
-    private static KanbanTaskDto MapTaskToDto(KanbanTask t) => new(
-        t.Id,
-        t.ProyectoId,
-        t.ColumnaId,
-        t.Titulo,
-        t.Descripcion,
-        t.AsignadoAId,
-        t.AsignadoA?.Nombre,
-        t.Prioridad,
-        t.HorasEstimadas,
-        t.Posicion,
-        t.CreadoPor,
-        t.CreadoEl,
-        t.ModificadoPor,
-        t.ModificadoEl
-    );
+    private static KanbanTaskDto MapTaskToDto(KanbanTask t) => new()
+    {
+        Id = t.Id,
+        ProyectoId = t.ProyectoId,
+        ColumnaId = t.ColumnaId,
+        Titulo = t.Titulo,
+        Descripcion = t.Descripcion,
+        AsignadoAId = t.AsignadoAId,
+        AsignadoANombre = t.AsignadoA?.Nombre,
+        Prioridad = t.Prioridad,
+        HorasEstimadas = t.HorasEstimadas,
+        Posicion = t.Posicion,
+        CreadoPor = t.CreadoPor,
+        CreadoEl = t.CreadoEl,
+        ModificadoPor = t.ModificadoPor,
+        ModificadoEl = t.ModificadoEl
+    };
 }
