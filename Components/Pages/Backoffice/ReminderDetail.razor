@@ -67,7 +67,7 @@
                         </MudItem>
                         <MudItem xs="6">
                             <MudText Typo="Typo.caption" Class="mud-text-secondary">Responsable</MudText>
-                            <MudText Typo="Typo.body1">@(_item.Assignee ?? "-")</MudText>
+                            <MudText Typo="Typo.body1">@(_item.AsignadoANombre ?? "-")</MudText>
                         </MudItem>
                         <MudItem xs="6">
                             <MudText Typo="Typo.caption" Class="mud-text-secondary">Aviso con antelación</MudText>
@@ -205,6 +205,8 @@
     [Inject] private IReminderService ReminderService { get; set; } = default!;
     [Inject] private IAlertService AlertService { get; set; } = default!;
     [Inject] private IAuditService AuditService { get; set; } = default!;
+    [Inject] private IUsuarioService UsuarioService { get; set; } = default!;
+    [Inject] private ICurrentUserService CurrentUserService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
 
@@ -212,9 +214,21 @@
     private ReminderItemDto? _item;
     private List<AlertDto> _alerts = [];
     private List<AuditLog> _auditLogs = [];
+    private Guid _usuarioActualId;
 
     protected override async Task OnInitializedAsync()
     {
+        // Obtener usuario actual
+        var currentUserName = CurrentUserService.CurrentUserName;
+        if (!string.IsNullOrEmpty(currentUserName))
+        {
+            var usuario = await UsuarioService.GetByNombreAsync(currentUserName);
+            if (usuario != null)
+            {
+                _usuarioActualId = usuario.Id;
+            }
+        }
+
         await LoadDataAsync();
     }
 
@@ -238,28 +252,28 @@
 
     private async Task CompleteAsync()
     {
-        await ReminderService.CompleteAsync(Id);
+        await ReminderService.CompleteAsync(_usuarioActualId, Id);
         Snackbar.Add("Recordatorio completado", MudBlazor.Severity.Success);
         await LoadDataAsync();
     }
 
     private async Task PauseAsync()
     {
-        await ReminderService.PauseAsync(Id);
+        await ReminderService.PauseAsync(_usuarioActualId, Id);
         Snackbar.Add("Recordatorio pausado", MudBlazor.Severity.Info);
         await LoadDataAsync();
     }
 
     private async Task ResumeAsync()
     {
-        await ReminderService.ResumeAsync(Id);
+        await ReminderService.ResumeAsync(_usuarioActualId, Id);
         Snackbar.Add("Recordatorio reanudado", MudBlazor.Severity.Success);
         await LoadDataAsync();
     }
 
     private async Task ArchiveAsync()
     {
-        await ReminderService.DeleteAsync(Id);
+        await ReminderService.DeleteAsync(_usuarioActualId, Id);
         Snackbar.Add("Recordatorio archivado", MudBlazor.Severity.Warning);
         Navigation.NavigateTo("/backoffice/reminders");
     }

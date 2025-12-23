@@ -2,6 +2,8 @@
 @page "/backoffice/prompts/{Id:guid}/edit"
 @using JSCHUB.Application.DTOs
 @using JSCHUB.Application.Interfaces
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
 @rendermode InteractiveServer
 
 <PageTitle>@(_isNew ? "Nuevo Prompt" : "Editar Prompt") - JSCHUB</PageTitle>
@@ -155,7 +157,7 @@
         _tools = (await ToolService.GetActivosAsync()).ToList();
         _tags = (await TagService.GetActivosAsync()).ToList();
         _users = (await UsuarioService.GetActivosAsync()).ToList();
-        _proyectos = (await ProyectoService.GetAllAsync()).ToList();
+        _proyectos = (await ProyectoService.SearchAsync(take: 1000)).ToList();
     }
 
     private async Task SaveAsync()

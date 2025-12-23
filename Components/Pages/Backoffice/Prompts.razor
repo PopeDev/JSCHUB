@@ -1,6 +1,8 @@
 @page "/backoffice/prompts"
 @using JSCHUB.Application.DTOs
 @using JSCHUB.Application.Interfaces
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
 @rendermode InteractiveServer
 
 <PageTitle>Prompts - JSCHUB</PageTitle>
@@ -162,6 +164,7 @@
     [Inject] private IToolService ToolService { get; set; } = default!;
     [Inject] private ITagService TagService { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private ILogger<Prompts> Logger { get; set; } = default!;
 
     private bool _loading = true;
     private List<PromptDto> _prompts = [];
@@ -176,14 +179,31 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadFiltersAsync();
-        await LoadDataAsync();
+        try
+        {
+            await LoadFiltersAsync();
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initializing Prompts page");
+            Snackbar.Add($"Error crítico al cargar la página: {ex.Message}", MudBlazor.Severity.Error);
+            _loading = false;
+        }
     }
 
     private async Task LoadFiltersAsync()
     {
-        _tools = (await ToolService.GetActivosAsync()).ToList();
-        _tags = (await TagService.GetActivosAsync()).ToList();
+        try 
+        {
+            _tools = (await ToolService.GetActivosAsync()).ToList();
+            _tags = (await TagService.GetActivosAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading filters");
+            // Non-critical, but good to know
+        }
     }
 
     private async Task LoadDataAsync()
@@ -197,6 +217,12 @@
                 tagId: _selectedTagId,
                 incluirInactivos: true
             )).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading prompts data");
+            Snackbar.Add($"Error al cargar prompts: {ex.Message}", MudBlazor.Severity.Error);
+            _prompts = [];
         }
         finally
         {
@@ -227,11 +253,18 @@
 
     private async Task ToggleActivoAsync(Guid id)
     {
-        var prompt = _prompts.First(p => p.Id == id);
-        var nuevoEstado = prompt.Activo ? "desactivado" : "activado";
-        await PromptService.ToggleActivoAsync(id);
-        Snackbar.Add($"Prompt {nuevoEstado}", MudBlazor.Severity.Success);
-        await LoadDataAsync();
+        try
+        {
+            var prompt = _prompts.First(p => p.Id == id);
+            var nuevoEstado = prompt.Activo ? "desactivado" : "activado";
+            await PromptService.ToggleActivoAsync(id);
+            Snackbar.Add($"Prompt {nuevoEstado}", MudBlazor.Severity.Success);
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al cambiar estado: {ex.Message}", MudBlazor.Severity.Error);
+        }
     }
 
     private async Task ConfirmDeleteAsync(PromptDto prompt)
@@ -255,7 +288,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error: {ex.Message}", MudBlazor.Severity.Error);
+            Snackbar.Add($"Error al eliminar: {ex.Message}", MudBlazor.Severity.Error);
         }
     }
 }

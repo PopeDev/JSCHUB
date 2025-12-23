@@ -118,7 +118,6 @@ C:\SOURCE\JSCHub\JSCHUB\obj\Debug\net10.0\scopedcss\bundle\JSCHUB.styles.css
 C:\SOURCE\JSCHub\JSCHUB\obj\Debug\net10.0\scopedcss\projectbundle\JSCHUB.bundle.scp.css
 C:\SOURCE\JSCHub\JSCHUB\obj\Debug\net10.0\compressed\tzxjg6is5z-{0}-du7z45fy1o-du7z45fy1o.gz
 C:\SOURCE\JSCHub\JSCHUB\obj\Debug\net10.0\compressed\0wz98yz2xy-{0}-u9015k2po7-u9015k2po7.gz
-C:\SOURCE\JSCHub\JSCHUB\obj\Debug\net10.0\compressed\nsc19ys1he-{0}-khy4lop6wu-khy4lop6wu.gz
 C:\SOURCE\JSCHub\JSCHUB\obj\Debug\net10.0\compressed\g5wsa3t1sh-{0}-bqjiyaj88i-bqjiyaj88i.gz
 C:\SOURCE\JSCHub\JSCHUB\obj\Debug\net10.0\compressed\opizu1zbmi-{0}-c2jlpeoesf-c2jlpeoesf.gz
 C:\SOURCE\JSCHub\JSCHUB\obj\Debug\net10.0\compressed\6xy9wipxwt-{0}-erw9l3u2r3-erw9l3u2r3.gz
@@ -180,4 +179,5 @@ C:\SOURCE\JSCHub\JSCHUB\obj\Debug\net10.0\JSCHUB.pdb
 C:\SOURCE\JSCHub\JSCHUB\obj\Debug\net10.0\JSCHUB.genruntimeconfig.cache
 C:\SOURCE\JSCHub\JSCHUB\obj\Debug\net10.0\ref\JSCHUB.dll
 C:\SOURCE\JSCHub\JSCHUB\obj\Debug\net10.0\JSCHUB.sourcelink.json
+C:\SOURCE\JSCHub\JSCHUB\obj\Debug\net10.0\compressed\nsc19ys1he-{0}-c9jomca36q-c9jomca36q.gz
 C:\SOURCE\JSCHub\JSCHUB\obj\Debug\net10.0\staticwebassets.upToDateCheck.txt

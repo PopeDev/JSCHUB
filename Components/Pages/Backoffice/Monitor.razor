@@ -169,6 +169,8 @@
 @code {
     [Inject] private IAlertService AlertService { get; set; } = default!;
     [Inject] private IReminderService ReminderService { get; set; } = default!;
+    [Inject] private IUsuarioService UsuarioService { get; set; } = default!;
+    [Inject] private ICurrentUserService CurrentUserService { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
 
     private bool _loading = true;
@@ -176,6 +178,7 @@
     private List<AlertDto> _alerts = [];
     private AlertState? _filterState = AlertState.Open;
     private AlertSeverity? _filterSeverity;
+    private Guid _usuarioActualId;
     
     private bool _snoozeDialogVisible;
     private DateTime? _snoozeDate = DateTime.Today.AddDays(1);
@@ -184,6 +187,16 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Obtener usuario actual
+        var currentUserName = CurrentUserService.CurrentUserName;
+        if (!string.IsNullOrEmpty(currentUserName))
+        {
+            var usuario = await UsuarioService.GetByNombreAsync(currentUserName);
+            if (usuario != null)
+            {
+                _usuarioActualId = usuario.Id;
+            }
+        }
         await LoadDataAsync();
     }
 
@@ -244,7 +257,7 @@
         _processingAlerts.Add(alert.Id);
         try
         {
-            await ReminderService.CompleteAsync(alert.ReminderItemId);
+            await ReminderService.CompleteAsync(_usuarioActualId, alert.ReminderItemId);
             Snackbar.Add("Recordatorio completado", MudBlazor.Severity.Success);
             await LoadDataAsync();
         }

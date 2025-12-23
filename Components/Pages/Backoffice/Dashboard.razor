@@ -180,6 +180,8 @@
     [Inject] private IAlertService AlertService { get; set; } = default!;
     [Inject] private IGastoService GastoService { get; set; } = default!;
     [Inject] private IReminderService ReminderService { get; set; } = default!;
+    [Inject] private IUsuarioService UsuarioService { get; set; } = default!;
+    [Inject] private ICurrentUserService CurrentUserService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
     private bool _loading = true;
@@ -189,9 +191,20 @@
     private decimal _gastosPendientes;
     private decimal _gastosDevolucion;
     private List<ReminderItemDto> _proximosRecordatorios = [];
+    private Guid _usuarioActualId;
 
     protected override async Task OnInitializedAsync()
     {
+        // Obtener usuario actual
+        var currentUserName = CurrentUserService.CurrentUserName;
+        if (!string.IsNullOrEmpty(currentUserName))
+        {
+            var usuario = await UsuarioService.GetByNombreAsync(currentUserName);
+            if (usuario != null)
+            {
+                _usuarioActualId = usuario.Id;
+            }
+        }
         await LoadDataAsync();
     }
 
@@ -207,20 +220,20 @@
             var inicioMes = new DateOnly(DateTime.Now.Year, DateTime.Now.Month, 1);
             var finMes = inicioMes.AddMonths(1).AddDays(-1);
 
-            var gastosPrevisto = await GastoService.SearchAsync(estado: EstadoGasto.Previsto, fechaDesde: inicioMes, fechaHasta: finMes);
+            var gastosPrevisto = await GastoService.SearchAsync(_usuarioActualId, estado: EstadoGasto.Previsto, fechaDesde: inicioMes, fechaHasta: finMes);
             _gastosPrevisto = gastosPrevisto.Sum(g => g.Importe);
 
-            var gastosPagados = await GastoService.SearchAsync(estado: EstadoGasto.Pagado, fechaDesde: inicioMes, fechaHasta: finMes);
+            var gastosPagados = await GastoService.SearchAsync(_usuarioActualId, estado: EstadoGasto.Pagado, fechaDesde: inicioMes, fechaHasta: finMes);
             _gastosPagados = gastosPagados.Sum(g => g.Importe);
 
-            var gastosPendientes = await GastoService.SearchAsync(estado: EstadoGasto.Pendiente, fechaDesde: inicioMes, fechaHasta: finMes);
+            var gastosPendientes = await GastoService.SearchAsync(_usuarioActualId, estado: EstadoGasto.Pendiente, fechaDesde: inicioMes, fechaHasta: finMes);
             _gastosPendientes = gastosPendientes.Sum(g => g.Importe);
 
-            var gastosDevolucion = await GastoService.SearchAsync(estado: EstadoGasto.PendienteDevolucion, fechaDesde: inicioMes, fechaHasta: finMes);
+            var gastosDevolucion = await GastoService.SearchAsync(_usuarioActualId, estado: EstadoGasto.PendienteDevolucion, fechaDesde: inicioMes, fechaHasta: finMes);
             _gastosDevolucion = gastosDevolucion.Sum(g => g.Importe);
 
             // Cargar próximos recordatorios
-            _proximosRecordatorios = (await ReminderService.SearchAsync(status: ItemStatus.Active, take: 5))
+            _proximosRecordatorios = (await ReminderService.SearchAsync(_usuarioActualId, status: ItemStatus.Active, take: 5))
                 .Where(r => r.NextOccurrenceAt.HasValue)
                 .OrderBy(r => r.NextOccurrenceAt)
                 .ToList();

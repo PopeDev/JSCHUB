@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("JSCHUB")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1a66b150b67fa0d019bde2da2962e0ee5f5de6bb")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+74000975b8c2ab014c131ccfb13174097062bfb3")]
 [assembly: System.Reflection.AssemblyProductAttribute("JSCHUB")]
 [assembly: System.Reflection.AssemblyTitleAttribute("JSCHUB")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -228,6 +228,23 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                     b.ToTable("gastos", (string)null);
                 });
 
+            modelBuilder.Entity("JSCHUB.Domain.Entities.GastoProyecto", b =>
+                {
+                    b.Property<Guid>("GastoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProyectoId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("GastoId", "ProyectoId");
+
+                    b.HasIndex("GastoId");
+
+                    b.HasIndex("ProyectoId");
+
+                    b.ToTable("gastos_proyectos", (string)null);
+                });
+
             modelBuilder.Entity("JSCHUB.Domain.Entities.KanbanColumn", b =>
                 {
                     b.Property<Guid>("Id")
@@ -343,6 +360,75 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                     b.ToTable("kanban_tareas", (string)null);
                 });
 
+            modelBuilder.Entity("JSCHUB.Domain.Entities.Prompt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Activo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime>("CreadoEl")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("ModificadoEl")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<Guid?>("ProyectoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("ToolId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Activo");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ModificadoEl");
+
+                    b.HasIndex("ProyectoId");
+
+                    b.HasIndex("ToolId");
+
+                    b.ToTable("prompts", (string)null);
+                });
+
+            modelBuilder.Entity("JSCHUB.Domain.Entities.PromptTag", b =>
+                {
+                    b.Property<Guid>("PromptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TagId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("PromptId", "TagId");
+
+                    b.HasIndex("TagId");
+
+                    b.ToTable("prompt_tags", (string)null);
+                });
+
             modelBuilder.Entity("JSCHUB.Domain.Entities.Proyecto", b =>
                 {
                     b.Property<Guid>("Id")
@@ -364,6 +450,11 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                     b.Property<string>("EnlacePrincipal")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
+
+                    b.Property<bool>("EsGeneral")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("Estado")
                         .IsRequired()
@@ -388,6 +479,11 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("EsGeneral")
+                        .IsUnique()
+                        .HasDatabaseName("IX_proyectos_EsGeneral_Unique")
+                        .HasFilter("\"EsGeneral\" = true");
 
                     b.HasIndex("Estado");
 
@@ -464,9 +560,8 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Assignee")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                    b.Property<Guid?>("AsignadoAId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Category")
                         .IsRequired()
@@ -545,7 +640,7 @@ namespace JSCHUB.Infrastructure.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Assignee");
+                    b.HasIndex("AsignadoAId");
 
                     b.HasIndex("Category");
 
@@ -554,6 +649,85 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                     b.HasIndex("Status");
 
                     b.ToTable("reminder_items", (string)null);
+                });
+
+            modelBuilder.Entity("JSCHUB.Domain.Entities.ReminderItemProyecto", b =>
+                {
+                    b.Property<Guid>("ReminderItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProyectoId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ReminderItemId", "ProyectoId");
+
+                    b.HasIndex("ProyectoId");
+
+                    b.HasIndex("ReminderItemId");
+
+                    b.ToTable("reminder_items_proyectos", (string)null);
+                });
+
+            modelBuilder.Entity("JSCHUB.Domain.Entities.Tag", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Activo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime>("CreadoEl")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Activo");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("tags", (string)null);
+                });
+
+            modelBuilder.Entity("JSCHUB.Domain.Entities.Tool", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Activo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime>("CreadoEl")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Activo");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("tools", (string)null);
                 });
 
             modelBuilder.Entity("JSCHUB.Domain.Entities.Usuario", b =>
@@ -590,6 +764,38 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                     b.ToTable("usuarios", (string)null);
                 });
 
+            modelBuilder.Entity("JSCHUB.Domain.Entities.UsuarioProyecto", b =>
+                {
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProyectoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AsignadoPor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("FechaAsignacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Rol")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("UsuarioId", "ProyectoId");
+
+                    b.HasIndex("ProyectoId");
+
+                    b.HasIndex("Rol");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("usuarios_proyectos", (string)null);
+                });
+
             modelBuilder.Entity("JSCHUB.Domain.Entities.Alert", b =>
                 {
                     b.HasOne("JSCHUB.Domain.Entities.ReminderItem", "ReminderItem")
@@ -621,6 +827,25 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("PagadoPor");
+                });
+
+            modelBuilder.Entity("JSCHUB.Domain.Entities.GastoProyecto", b =>
+                {
+                    b.HasOne("JSCHUB.Domain.Entities.Gasto", "Gasto")
+                        .WithMany("GastosProyecto")
+                        .HasForeignKey("GastoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("JSCHUB.Domain.Entities.Proyecto", "Proyecto")
+                        .WithMany("GastosProyecto")
+                        .HasForeignKey("ProyectoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Gasto");
+
+                    b.Navigation("Proyecto");
                 });
 
             modelBuilder.Entity("JSCHUB.Domain.Entities.KanbanColumn", b =>
@@ -660,6 +885,51 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                     b.Navigation("Proyecto");
                 });
 
+            modelBuilder.Entity("JSCHUB.Domain.Entities.Prompt", b =>
+                {
+                    b.HasOne("JSCHUB.Domain.Entities.Usuario", "CreatedByUser")
+                        .WithMany("PromptsCreados")
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("JSCHUB.Domain.Entities.Proyecto", "Proyecto")
+                        .WithMany()
+                        .HasForeignKey("ProyectoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("JSCHUB.Domain.Entities.Tool", "Tool")
+                        .WithMany("Prompts")
+                        .HasForeignKey("ToolId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Proyecto");
+
+                    b.Navigation("Tool");
+                });
+
+            modelBuilder.Entity("JSCHUB.Domain.Entities.PromptTag", b =>
+                {
+                    b.HasOne("JSCHUB.Domain.Entities.Prompt", "Prompt")
+                        .WithMany("PromptTags")
+                        .HasForeignKey("PromptId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("JSCHUB.Domain.Entities.Tag", "Tag")
+                        .WithMany("PromptTags")
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Prompt");
+
+                    b.Navigation("Tag");
+                });
+
             modelBuilder.Entity("JSCHUB.Domain.Entities.RecursoProyecto", b =>
                 {
                     b.HasOne("JSCHUB.Domain.Entities.Proyecto", "Proyecto")
@@ -671,26 +941,108 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                     b.Navigation("Proyecto");
                 });
 
+            modelBuilder.Entity("JSCHUB.Domain.Entities.ReminderItem", b =>
+                {
+                    b.HasOne("JSCHUB.Domain.Entities.Usuario", "AsignadoA")
+                        .WithMany("ReminderItemsAsignados")
+                        .HasForeignKey("AsignadoAId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("AsignadoA");
+                });
+
+            modelBuilder.Entity("JSCHUB.Domain.Entities.ReminderItemProyecto", b =>
+                {
+                    b.HasOne("JSCHUB.Domain.Entities.Proyecto", "Proyecto")
+                        .WithMany("ReminderItemsProyecto")
+                        .HasForeignKey("ProyectoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("JSCHUB.Domain.Entities.ReminderItem", "ReminderItem")
+                        .WithMany("ReminderItemsProyecto")
+                        .HasForeignKey("ReminderItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Proyecto");
+
+                    b.Navigation("ReminderItem");
+                });
+
+            modelBuilder.Entity("JSCHUB.Domain.Entities.UsuarioProyecto", b =>
+                {
+                    b.HasOne("JSCHUB.Domain.Entities.Proyecto", "Proyecto")
+                        .WithMany("UsuariosProyecto")
+                        .HasForeignKey("ProyectoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("JSCHUB.Domain.Entities.Usuario", "Usuario")
+                        .WithMany("UsuarioProyectos")
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Proyecto");
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("JSCHUB.Domain.Entities.Gasto", b =>
+                {
+                    b.Navigation("GastosProyecto");
+                });
+
             modelBuilder.Entity("JSCHUB.Domain.Entities.KanbanColumn", b =>
                 {
                     b.Navigation("Tareas");
+                });
+
+            modelBuilder.Entity("JSCHUB.Domain.Entities.Prompt", b =>
+                {
+                    b.Navigation("PromptTags");
                 });
 
             modelBuilder.Entity("JSCHUB.Domain.Entities.Proyecto", b =>
                 {
                     b.Navigation("Enlaces");
 
+                    b.Navigation("GastosProyecto");
+
                     b.Navigation("Recursos");
+
+                    b.Navigation("ReminderItemsProyecto");
+
+                    b.Navigation("UsuariosProyecto");
                 });
 
             modelBuilder.Entity("JSCHUB.Domain.Entities.ReminderItem", b =>
                 {
                     b.Navigation("Alerts");
+
+                    b.Navigation("ReminderItemsProyecto");
+                });
+
+            modelBuilder.Entity("JSCHUB.Domain.Entities.Tag", b =>
+                {
+                    b.Navigation("PromptTags");
+                });
+
+            modelBuilder.Entity("JSCHUB.Domain.Entities.Tool", b =>
+                {
+                    b.Navigation("Prompts");
                 });
 
             modelBuilder.Entity("JSCHUB.Domain.Entities.Usuario", b =>
                 {
                     b.Navigation("Gastos");
+
+                    b.Navigation("PromptsCreados");
+
+                    b.Navigation("ReminderItemsAsignados");
+
+                    b.Navigation("UsuarioProyectos");
                 });
 #pragma warning restore 612, 618
         }
