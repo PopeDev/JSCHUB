@@ -2,8 +2,6 @@
 @page "/backoffice/prompts/{Id:guid}/edit"
 @using JSCHUB.Application.DTOs
 @using JSCHUB.Application.Interfaces
-@using Microsoft.AspNetCore.Authorization
-@attribute [Authorize]
 @rendermode InteractiveServer
 
 <PageTitle>@(_isNew ? "Nuevo Prompt" : "Editar Prompt") - JSCHUB</PageTitle>
