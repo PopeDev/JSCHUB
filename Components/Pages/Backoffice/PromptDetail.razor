@@ -1,0 +1,129 @@
+@page "/backoffice/prompts/{Id:guid}"
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@rendermode InteractiveServer
+
+<PageTitle>Detalle Prompt - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else if (_prompt == null)
+    {
+        <MudAlert Severity="Severity.Error">Prompt no encontrado</MudAlert>
+    }
+    else
+    {
+        <MudPaper Class="pa-4">
+            <div class="d-flex justify-space-between align-center mb-4">
+                <MudText Typo="Typo.h5">
+                    <MudIcon Icon="@Icons.Material.Filled.Chat" Class="mr-2" />
+                    @_prompt.Title
+                </MudText>
+                <div>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Edit"
+                               Href="@($"/backoffice/prompts/{Id}/edit")">
+                        Editar
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Class="ml-2"
+                               StartIcon="@Icons.Material.Filled.ArrowBack"
+                               Href="/backoffice/prompts">
+                        Volver
+                    </MudButton>
+                </div>
+            </div>
+
+            <MudDivider Class="mb-4" />
+
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Herramienta</MudText>
+                    <MudChip T="string" Size="Size.Medium" Color="Color.Secondary">@_prompt.ToolName</MudChip>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Estado</MudText>
+                    @if (_prompt.Activo)
+                    {
+                        <MudChip T="string" Size="Size.Medium" Color="Color.Success">Activo</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Size="Size.Medium" Color="Color.Default">Inactivo</MudChip>
+                    }
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Creado por</MudText>
+                    <MudText>@_prompt.CreatedByUserNombre</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Proyecto</MudText>
+                    <MudText>@(_prompt.ProyectoNombre ?? "Sin proyecto")</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Creado</MudText>
+                    <MudText>@_prompt.CreadoEl.ToString("dd/MM/yyyy HH:mm")</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Última modificación</MudText>
+                    <MudText>@_prompt.ModificadoEl.ToString("dd/MM/yyyy HH:mm")</MudText>
+                </MudItem>
+            </MudGrid>
+
+            @if (_prompt.Tags.Any())
+            {
+                <MudDivider Class="my-4" />
+                <MudText Typo="Typo.subtitle2" Class="mud-text-secondary mb-2">Tags</MudText>
+                <div>
+                    @foreach (var tag in _prompt.Tags)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="ma-1">@tag.Name</MudChip>
+                    }
+                </div>
+            }
+
+            <MudDivider Class="my-4" />
+
+            <MudText Typo="Typo.subtitle2" Class="mud-text-secondary mb-2">Contenido del Prompt</MudText>
+            <MudPaper Class="pa-4" Elevation="0" Style="background-color: var(--mud-palette-background-grey);">
+                <MudText Style="white-space: pre-wrap;">@_prompt.Description</MudText>
+            </MudPaper>
+
+            <div class="d-flex justify-end mt-4">
+                <MudButton Variant="Variant.Filled" Color="Color.Info"
+                           StartIcon="@Icons.Material.Filled.ContentCopy"
+                           OnClick="CopyToClipboard">
+                    Copiar al portapapeles
+                </MudButton>
+            </div>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    [Inject] private IPromptService PromptService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+
+    private bool _loading = true;
+    private PromptDto? _prompt;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _prompt = await PromptService.GetByIdAsync(Id);
+        _loading = false;
+    }
+
+    private async Task CopyToClipboard()
+    {
+        if (_prompt != null)
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", _prompt.Description);
+            Snackbar.Add("Prompt copiado al portapapeles", MudBlazor.Severity.Success);
+        }
+    }
+}

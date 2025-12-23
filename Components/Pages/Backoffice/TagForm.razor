@@ -1,0 +1,116 @@
+@page "/backoffice/tags/new"
+@page "/backoffice/tags/{Id:guid}/edit"
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@rendermode InteractiveServer
+
+<PageTitle>@(_isNew ? "Nuevo Tag" : "Editar Tag") - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-4">
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.h5" Class="mb-4">
+            <MudIcon Icon="@(_isNew ? Icons.Material.Filled.Add : Icons.Material.Filled.Edit)" Class="mr-2" />
+            @(_isNew ? "Nuevo Tag" : "Editar Tag")
+        </MudText>
+
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        }
+        else
+        {
+            <MudForm @ref="_form" @bind-IsValid="_formValid">
+                <MudTextField @bind-Value="_name" Label="Nombre" Required="true"
+                              RequiredError="El nombre es obligatorio"
+                              MaxLength="100" Class="mb-3" />
+
+                @if (!_isNew)
+                {
+                    <MudSwitch @bind-Value="_activo" Label="Activo" Color="Color.Success" Class="mb-4" />
+                }
+
+                <div class="d-flex gap-2 mt-4">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               OnClick="SaveAsync" Disabled="@(!_formValid || _saving)">
+                        @if (_saving)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        Guardar
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Href="/backoffice/tags">
+                        Cancelar
+                    </MudButton>
+                </div>
+            </MudForm>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    [Inject] private ITagService TagService { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private MudForm _form = default!;
+    private bool _loading = true;
+    private bool _saving;
+    private bool _formValid;
+    private bool _isNew => !Id.HasValue;
+
+    private string _name = string.Empty;
+    private bool _activo = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!_isNew)
+        {
+            var tag = await TagService.GetByIdAsync(Id!.Value);
+            if (tag == null)
+            {
+                Snackbar.Add("Tag no encontrado", MudBlazor.Severity.Error);
+                Navigation.NavigateTo("/backoffice/tags");
+                return;
+            }
+
+            _name = tag.Name;
+            _activo = tag.Activo;
+        }
+        _loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        await _form.Validate();
+        if (!_formValid) return;
+
+        _saving = true;
+        try
+        {
+            if (_isNew)
+            {
+                var dto = new CreateTagDto(_name);
+                await TagService.CreateAsync(dto);
+                Snackbar.Add("Tag creado", MudBlazor.Severity.Success);
+            }
+            else
+            {
+                var dto = new UpdateTagDto(_name, _activo);
+                await TagService.UpdateAsync(Id!.Value, dto);
+                Snackbar.Add("Tag actualizado", MudBlazor.Severity.Success);
+            }
+
+            Navigation.NavigateTo("/backoffice/tags");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", MudBlazor.Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

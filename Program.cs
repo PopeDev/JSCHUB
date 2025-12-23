@@ -29,6 +29,9 @@ builder.Services.AddScoped<IEnlaceProyectoRepository, EnlaceProyectoRepository>(
 builder.Services.AddScoped<IRecursoProyectoRepository, RecursoProyectoRepository>();
 builder.Services.AddScoped<IKanbanRepository, KanbanRepository>();
 builder.Services.AddScoped<IUsuarioProyectoRepository, UsuarioProyectoRepository>();
+builder.Services.AddScoped<IToolRepository, ToolRepository>();
+builder.Services.AddScoped<ITagRepository, TagRepository>();
+builder.Services.AddScoped<IPromptRepository, PromptRepository>();
 
 // Add Services
 builder.Services.AddScoped<IReminderService, ReminderService>();
@@ -41,6 +44,9 @@ builder.Services.AddScoped<IEnlaceProyectoService, EnlaceProyectoService>();
 builder.Services.AddScoped<IRecursoProyectoService, RecursoProyectoService>();
 builder.Services.AddScoped<IKanbanService, KanbanService>();
 builder.Services.AddScoped<IUsuarioProyectoService, UsuarioProyectoService>();
+builder.Services.AddScoped<IToolService, ToolService>();
+builder.Services.AddScoped<ITagService, TagService>();
+builder.Services.AddScoped<IPromptService, PromptService>();
 
 // Add Authentication Services (Scoped para aislamiento de sesión por circuito)
 builder.Services.AddScoped<JSCHUB.Infrastructure.Services.AuthService>();
