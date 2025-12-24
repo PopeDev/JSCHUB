@@ -183,4 +183,12 @@ public class KanbanRepository : IKanbanRepository
 
         await _context.SaveChangesAsync(ct);
     }
+    public async Task<IEnumerable<KanbanTask>> GetTareasByProyectoAsync(Guid proyectoId, CancellationToken ct = default)
+    {
+        return await _context.KanbanTareas
+            .Include(t => t.Columna)
+            .Include(t => t.Sprint)
+            .Where(t => t.ProyectoId == proyectoId)
+            .ToListAsync(ct);
+    }
 }

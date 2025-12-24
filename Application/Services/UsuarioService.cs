@@ -98,6 +98,12 @@ public class UsuarioService : IUsuarioService
         usuario.Nombre,
         usuario.Email,
         usuario.Telefono,
-        usuario.Activo
+        usuario.Activo,
+        usuario.UsuarioProyectos.Select(up => new ProyectoAsignadoDto(
+            up.ProyectoId,
+            up.Proyecto.Nombre,
+            up.Proyecto.EsGeneral,
+            up.Rol
+        ))
     );
 }

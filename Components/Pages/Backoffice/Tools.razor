@@ -94,6 +94,7 @@
 @code {
     [Inject] private IToolService ToolService { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private ILogger<Tools> Logger { get; set; } = default!;
 
     private bool _loading = true;
     private List<ToolDto> _tools = [];
@@ -102,7 +103,15 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadDataAsync();
+        try
+        {
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initializing Tools page");
+            Snackbar.Add($"Error al cargar la página: {ex.Message}", MudBlazor.Severity.Error);
+        }
     }
 
     private async Task LoadDataAsync()
@@ -112,6 +121,12 @@
         {
             _tools = (await ToolService.GetAllAsync()).ToList();
         }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading tools data");
+            Snackbar.Add($"Error al cargar herramientas: {ex.Message}", MudBlazor.Severity.Error);
+            _tools = [];
+        }
         finally
         {
             _loading = false;
@@ -120,11 +135,18 @@
 
     private async Task ToggleActivoAsync(Guid id)
     {
-        var tool = _tools.First(t => t.Id == id);
-        var nuevoEstado = tool.Activo ? "desactivada" : "activada";
-        await ToolService.ToggleActivoAsync(id);
-        Snackbar.Add($"Herramienta {nuevoEstado}", MudBlazor.Severity.Success);
-        await LoadDataAsync();
+        try
+        {
+            var tool = _tools.First(t => t.Id == id);
+            var nuevoEstado = tool.Activo ? "desactivada" : "activada";
+            await ToolService.ToggleActivoAsync(id);
+            Snackbar.Add($"Herramienta {nuevoEstado}", MudBlazor.Severity.Success);
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al cambiar estado: {ex.Message}", MudBlazor.Severity.Error);
+        }
     }
 
     private async Task ConfirmDeleteAsync(ToolDto tool)

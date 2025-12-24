@@ -39,6 +39,8 @@ public class KanbanService : IKanbanService
         return new KanbanBoardDto(
             proyecto.Id,
             proyecto.Nombre,
+            proyecto.SprintActivoId,
+            proyecto.SprintActivo?.Nombre,
             columnas.Select(MapColumnToDto)
         );
     }
@@ -226,6 +228,9 @@ public class KanbanService : IKanbanService
 
         var maxPosition = await _repository.GetMaxTaskPositionInColumnAsync(dto.ColumnaId, ct);
 
+        // Obtener el proyecto para ver si hay sprint activo
+        var proyecto = await _proyectoRepository.GetByIdAsync(dto.ProyectoId, ct);
+        
         var task = new KanbanTask
         {
             Id = Guid.NewGuid(),
@@ -237,6 +242,11 @@ public class KanbanService : IKanbanService
             Prioridad = dto.Prioridad ?? PrioridadTarea.Media,
             HorasEstimadas = dto.HorasEstimadas ?? 0,
             Posicion = dto.Posicion ?? (maxPosition + 1),
+            // Asignar al sprint activo si existe
+            SprintId = proyecto?.SprintActivoId,
+            SprintOrigenId = proyecto?.SprintActivoId,
+            EsComprometida = false, // Creada durante, no al inicio
+            SprintsTranscurridos = (proyecto?.SprintActivoId).HasValue ? 0 : 0, 
             CreadoPor = usuario,
             CreadoEl = DateTime.UtcNow,
             ModificadoPor = usuario,
@@ -343,6 +353,9 @@ public class KanbanService : IKanbanService
         CreadoPor = t.CreadoPor,
         CreadoEl = t.CreadoEl,
         ModificadoPor = t.ModificadoPor,
-        ModificadoEl = t.ModificadoEl
+        ModificadoEl = t.ModificadoEl,
+        SprintId = t.SprintId,
+        EsComprometida = t.EsComprometida,
+        SprintsTranscurridos = t.SprintsTranscurridos,
     };
 }

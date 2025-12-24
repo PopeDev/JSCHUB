@@ -55,6 +55,19 @@ public class Proyecto
     public ICollection<GastoProyecto> GastosProyecto { get; set; } = new List<GastoProyecto>();
     public ICollection<ReminderItemProyecto> ReminderItemsProyecto { get; set; } = new List<ReminderItemProyecto>();
 
+    // === Sprints ===
+
+    /// <summary>
+    /// Sprint actualmente activo para este proyecto (puede ser null)
+    /// </summary>
+    public Guid? SprintActivoId { get; set; }
+    public Sprint? SprintActivo { get; set; }
+
+    /// <summary>
+    /// Todos los sprints del proyecto (históricos + actual)
+    /// </summary>
+    public ICollection<Sprint> Sprints { get; set; } = [];
+
     /// <summary>
     /// Obtiene las etiquetas como lista
     /// </summary>

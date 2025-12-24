@@ -16,18 +16,25 @@ public class UsuarioRepository : IUsuarioRepository
 
     public async Task<Usuario?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        return await _context.Usuarios.FindAsync([id], ct);
+        return await _context.Usuarios
+            .Include(x => x.UsuarioProyectos)
+                .ThenInclude(x => x.Proyecto)
+            .FirstOrDefaultAsync(x => x.Id == id, ct);
     }
 
     public async Task<Usuario?> GetByNombreAsync(string nombre, CancellationToken ct = default)
     {
         return await _context.Usuarios
+            .Include(x => x.UsuarioProyectos)
+                .ThenInclude(x => x.Proyecto)
             .FirstOrDefaultAsync(x => x.Nombre.ToLower() == nombre.ToLower(), ct);
     }
 
     public async Task<IEnumerable<Usuario>> GetAllAsync(CancellationToken ct = default)
     {
         return await _context.Usuarios
+            .Include(x => x.UsuarioProyectos)
+                .ThenInclude(x => x.Proyecto)
             .OrderBy(x => x.Nombre)
             .ToListAsync(ct);
     }
@@ -35,6 +42,8 @@ public class UsuarioRepository : IUsuarioRepository
     public async Task<IEnumerable<Usuario>> GetActivosAsync(CancellationToken ct = default)
     {
         return await _context.Usuarios
+            .Include(x => x.UsuarioProyectos)
+                .ThenInclude(x => x.Proyecto)
             .Where(x => x.Activo)
             .OrderBy(x => x.Nombre)
             .ToListAsync(ct);

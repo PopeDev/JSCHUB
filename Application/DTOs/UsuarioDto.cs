@@ -8,7 +8,8 @@ public record UsuarioDto(
     string Nombre,
     string? Email,
     string? Telefono,
-    bool Activo
+    bool Activo,
+    IEnumerable<ProyectoAsignadoDto> Proyectos
 );
 
 /// <summary>

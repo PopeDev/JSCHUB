@@ -27,4 +27,5 @@ public interface IKanbanRepository
     Task DeleteTaskAsync(KanbanTask task, CancellationToken ct = default);
     Task UpdateTasksPositionsAsync(IEnumerable<KanbanTask> tasks, CancellationToken ct = default);
     Task MoveTasksToColumnAsync(Guid fromColumnaId, Guid toColumnaId, CancellationToken ct = default);
+    Task<IEnumerable<KanbanTask>> GetTareasByProyectoAsync(Guid proyectoId, CancellationToken ct = default);
 }

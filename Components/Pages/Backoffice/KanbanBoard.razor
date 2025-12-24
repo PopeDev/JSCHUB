@@ -25,9 +25,41 @@
             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                     <MudIcon Icon="@Icons.Material.Filled.Dashboard" Size="Size.Large" Color="Color.Primary" />
-                    <MudText Typo="Typo.h5">Pizarra: @_board.ProyectoNombre</MudText>
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.h5">
+                            Pizarra: @_board.ProyectoNombre
+                        </MudText>
+                        
+                        @if (_board.SprintActivoId.HasValue)
+                        {
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudChip T="string" Color="Color.Success" Size="Size.Small" Icon="@Icons.Material.Filled.DirectionsRun" Class="mt-1">
+                                    Sprint: @_board.SprintActivoNombre
+                                </MudChip>
+                            </MudStack>
+                        }
+                    </MudStack>
                 </MudStack>
                 <MudStack Row="true" Spacing="2">
+                    @if (_board.SprintActivoId.HasValue)
+                    {
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Warning" 
+                                   Size="Size.Small" 
+                                   StartIcon="@Icons.Material.Filled.Stop"
+                                   OnClick="CerrarSprintAsync">
+                            Cerrar Sprint
+                        </MudButton>
+                    }
+                    
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Info"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.ViewList"
+                               Href="@($"/backoffice/proyectos/{ProyectoId}/sprints")">
+                        Gestión Sprints
+                    </MudButton>
+
                     <MudButton Variant="Variant.Filled"
                                Color="Color.Primary"
                                Size="Size.Small"
@@ -85,13 +117,7 @@
                     </MudPaper>
                 }
 
-                @* Placeholder/Boton nueva Columna *@
-                 <MudPaper Class="pa-4 flex-shrink-0 d-flex align-center justify-center" Elevation="0" Style="min-width: 300px; height: 100px; border: 2px dashed var(--mud-palette-divider); opacity: 0.6; cursor: pointer;" @onclick="OpenNewColumnDialog">
-                    <MudStack AlignItems="AlignItems.Center" Spacing="1">
-                        <MudIcon Icon="@Icons.Material.Filled.Add" />
-                        <MudText>Nueva columna</MudText>
-                    </MudStack>
-                 </MudPaper>
+
 
             </ChildContent>
             <ItemRenderer>
@@ -262,6 +288,7 @@
     [Parameter] public Guid ProyectoId { get; set; }
 
     [Inject] private IKanbanService KanbanService { get; set; } = default!;
+    [Inject] private ISprintService SprintService { get; set; } = default!;
     [Inject] private IUsuarioService UsuarioService { get; set; } = default!;
     [Inject] private ICurrentUserService CurrentUserService { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
@@ -613,4 +640,37 @@
         PrioridadTarea.Urgente => "Urgente",
         _ => prioridad.ToString()
     };
+    // ========== SPRINT ==========
+    
+    private async Task CerrarSprintAsync()
+    {
+        // Cargar sprints disponibles (pendientes)
+        var sprints = (await SprintService.GetByProyectoIdAsync(ProyectoId))
+            .Where(s => s.Estado == EstadoSprint.Pendiente)
+            .OrderBy(s => s.FechaInicio)
+            .ToList();
+            
+        var parameters = new DialogParameters<CerrarSprintDialog>
+        {
+            { x => x.SprintsDisponibles, sprints }
+        };
+
+        var dialog = await DialogService.ShowAsync<CerrarSprintDialog>("Cerrar Sprint Activo", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            var nextSprintId = result.Data as Guid?;
+            try
+            {
+                var cierreResult = await SprintService.CerrarSprintActivoAsync(ProyectoId, nextSprintId, CurrentUser);
+                Snackbar.Add($"Sprint cerrado. {cierreResult.TareasMovidas} tareas movidas.", Severity.Success);
+                await LoadDataAsync();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error al cerrar sprint: {ex.Message}", Severity.Error);
+            }
+        }
+    }
 }

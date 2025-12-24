@@ -38,6 +38,10 @@ public class ReminderDbContext : DbContext
     public DbSet<Prompt> Prompts => Set<Prompt>();
     public DbSet<PromptTag> PromptTags => Set<PromptTag>();
 
+    // Módulo de Sprints
+    public DbSet<Sprint> Sprints => Set<Sprint>();
+    public DbSet<SprintTareaHistorico> SprintTareasHistorico => Set<SprintTareaHistorico>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

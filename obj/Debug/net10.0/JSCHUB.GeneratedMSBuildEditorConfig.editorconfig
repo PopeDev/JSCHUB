@@ -37,6 +37,10 @@ build_property.EnableCodeStyleSeverity =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xBcHAucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/SOURCE/JSCHub/JSCHUB/Components/Pages/Backoffice/CerrarSprintDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xCYWNrb2ZmaWNlXENlcnJhclNwcmludERpYWxvZy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/SOURCE/JSCHub/JSCHUB/Components/Pages/Backoffice/Dashboard.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xCYWNrb2ZmaWNlXERhc2hib2FyZC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
@@ -97,6 +101,18 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xCYWNrb2ZmaWNlXFJlbWluZGVycy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/SOURCE/JSCHub/JSCHUB/Components/Pages/Backoffice/SprintForm.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xCYWNrb2ZmaWNlXFNwcmludEZvcm0ucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/SOURCE/JSCHub/JSCHUB/Components/Pages/Backoffice/SprintHistorico.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xCYWNrb2ZmaWNlXFNwcmludEhpc3Rvcmljby5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/SOURCE/JSCHub/JSCHUB/Components/Pages/Backoffice/Sprints.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xCYWNrb2ZmaWNlXFNwcmludHMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/SOURCE/JSCHub/JSCHUB/Components/Pages/Backoffice/TagForm.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xCYWNrb2ZmaWNlXFRhZ0Zvcm0ucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
@@ -115,6 +131,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/SOURCE/JSCHub/JSCHUB/Components/Pages/Backoffice/UsuarioForm.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xCYWNrb2ZmaWNlXFVzdWFyaW9Gb3JtLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/SOURCE/JSCHub/JSCHUB/Components/Pages/Backoffice/UsuarioProyectosDialog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xCYWNrb2ZmaWNlXFVzdWFyaW9Qcm95ZWN0b3NEaWFsb2cucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/SOURCE/JSCHub/JSCHUB/Components/Pages/Backoffice/Usuarios.razor]

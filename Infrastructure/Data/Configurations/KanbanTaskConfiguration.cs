@@ -64,5 +64,26 @@ public class KanbanTaskConfiguration : IEntityTypeConfiguration<KanbanTask>
             .WithMany()
             .HasForeignKey(x => x.AsignadoAId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        // === Sprint fields ===
+        builder.Property(x => x.SprintId);
+        builder.Property(x => x.SprintOrigenId);
+        
+        builder.Property(x => x.EsComprometida)
+            .HasDefaultValue(false)
+            .IsRequired();
+
+        builder.Property(x => x.SprintsTranscurridos)
+            .HasDefaultValue(0)
+            .IsRequired();
+
+        builder.HasIndex(x => x.SprintId);
+        builder.HasIndex(x => new { x.SprintId, x.EsComprometida });
+
+        // Relación con Sprint
+        builder.HasOne(x => x.Sprint)
+            .WithMany(x => x.Tareas)
+            .HasForeignKey(x => x.SprintId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

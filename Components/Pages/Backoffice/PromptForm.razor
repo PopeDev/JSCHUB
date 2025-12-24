@@ -26,23 +26,23 @@
 
                 <MudTextField @bind-Value="_description" Label="Descripción / Contenido del Prompt" Required="true"
                               RequiredError="La descripción es obligatoria"
-                              Lines="8" Class="mb-3" />
+                              Lines="15" AutoGrow="true" MaxLines="30" Class="mb-3" />
 
-                <MudSelect @bind-Value="_toolId" Label="Herramienta" Required="true"
+                <MudSelect T="Guid" @bind-Value="_toolId" Label="Herramienta" Required="true"
                            RequiredError="La herramienta es obligatoria" Class="mb-3">
                     @foreach (var tool in _tools)
                     {
-                        <MudSelectItem Value="@tool.Id">@tool.Name</MudSelectItem>
+                        <MudSelectItem T="Guid" Value="@tool.Id">@tool.Name</MudSelectItem>
                     }
                 </MudSelect>
 
                 @if (_isNew)
                 {
-                    <MudSelect @bind-Value="_createdByUserId" Label="Creado por" Required="true"
+                    <MudSelect T="Guid" @bind-Value="_createdByUserId" Label="Creado por" Required="true"
                                RequiredError="El usuario es obligatorio" Class="mb-3">
                         @foreach (var user in _users)
                         {
-                            <MudSelectItem Value="@user.Id">@user.Nombre</MudSelectItem>
+                            <MudSelectItem T="Guid" Value="@user.Id">@user.Nombre</MudSelectItem>
                         }
                     </MudSelect>
                 }
@@ -51,10 +51,10 @@
                     <MudTextField Value="@_createdByUserName" Label="Creado por" ReadOnly="true" Class="mb-3" />
                 }
 
-                <MudSelect @bind-Value="_proyectoId" Label="Proyecto (opcional)" Clearable="true" Class="mb-3">
+                <MudSelect T="Guid?" @bind-Value="_proyectoId" Label="Proyecto (opcional)" Clearable="true" Class="mb-3">
                     @foreach (var proyecto in _proyectos)
                     {
-                        <MudSelectItem Value="@proyecto.Id">@proyecto.Nombre</MudSelectItem>
+                        <MudSelectItem T="Guid?" Value="@((Guid?)proyecto.Id)">@proyecto.Nombre</MudSelectItem>
                     }
                 </MudSelect>
 
@@ -98,6 +98,7 @@
     [Inject] private IProyectoService ProyectoService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private ICurrentUserService CurrentUserService { get; set; } = default!;
 
     private MudForm _form = default!;
     private bool _loading = true;
@@ -142,12 +143,26 @@
             _selectedTagIds = prompt.Tags.Select(t => t.Id).ToList();
             _activo = prompt.Activo;
         }
-        else if (_users.Any())
+        else
         {
-            _createdByUserId = _users.First().Id;
+            // New prompt: use logged user if available
+            var loggedUserId = FindUsuarioIdByNombre(CurrentUserService.CurrentUserName);
+            _createdByUserId = loggedUserId ?? (_users.Any() ? _users.First().Id : Guid.Empty);
+            
+            // Auto-select first tool if only one available
+            if (_tools.Count == 1)
+            {
+                _toolId = _tools.First().Id;
+            }
         }
 
         _loading = false;
+    }
+
+    private Guid? FindUsuarioIdByNombre(string? nombre)
+    {
+        if (string.IsNullOrEmpty(nombre)) return null;
+        return _users.FirstOrDefault(u => u.Nombre.Equals(nombre, StringComparison.OrdinalIgnoreCase))?.Id;
     }
 
     private async Task LoadCatalogsAsync()

@@ -313,6 +313,11 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
 
+                    b.Property<bool>("EsComprometida")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<decimal>("HorasEstimadas")
                         .ValueGeneratedOnAdd()
                         .HasPrecision(8, 2)
@@ -340,6 +345,17 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                     b.Property<Guid>("ProyectoId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("SprintId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SprintOrigenId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SprintsTranscurridos")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<string>("Titulo")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -355,7 +371,11 @@ namespace JSCHUB.Infrastructure.Data.Migrations
 
                     b.HasIndex("ProyectoId");
 
+                    b.HasIndex("SprintId");
+
                     b.HasIndex("ColumnaId", "Posicion");
+
+                    b.HasIndex("SprintId", "EsComprometida");
 
                     b.ToTable("kanban_tareas", (string)null);
                 });
@@ -478,6 +498,9 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<Guid?>("SprintActivoId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("EsGeneral")
@@ -490,6 +513,9 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                     b.HasIndex("ModificadoEl");
 
                     b.HasIndex("Nombre");
+
+                    b.HasIndex("SprintActivoId")
+                        .IsUnique();
 
                     b.ToTable("proyectos", (string)null);
                 });
@@ -666,6 +692,132 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                     b.HasIndex("ReminderItemId");
 
                     b.ToTable("reminder_items_proyectos", (string)null);
+                });
+
+            modelBuilder.Entity("JSCHUB.Domain.Entities.Sprint", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreadoEl")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreadoPor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("FechaCierre")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("FechaFin")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("FechaInicio")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("ModificadoEl")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ModificadoPor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Objetivo")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<decimal?>("PorcentajeCompletitud")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<Guid>("ProyectoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("TareasComprometidas")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("TareasEntregadas")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Temporizacion")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Estado");
+
+                    b.HasIndex("ProyectoId");
+
+                    b.HasIndex("ProyectoId", "Estado");
+
+                    b.ToTable("sprints", (string)null);
+                });
+
+            modelBuilder.Entity("JSCHUB.Domain.Entities.SprintTareaHistorico", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AsignadoANombre")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ColumnaFinal")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("EraComprometida")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("FueEntregada")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("SprintId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SprintsTranscurridos")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TareaDescripcion")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("TareaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TareaTitulo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SprintId");
+
+                    b.HasIndex("TareaId");
+
+                    b.HasIndex("SprintId", "FueEntregada");
+
+                    b.ToTable("sprint_tareas_historico", (string)null);
                 });
 
             modelBuilder.Entity("JSCHUB.Domain.Entities.Tag", b =>
@@ -878,11 +1030,18 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("JSCHUB.Domain.Entities.Sprint", "Sprint")
+                        .WithMany("Tareas")
+                        .HasForeignKey("SprintId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("AsignadoA");
 
                     b.Navigation("Columna");
 
                     b.Navigation("Proyecto");
+
+                    b.Navigation("Sprint");
                 });
 
             modelBuilder.Entity("JSCHUB.Domain.Entities.Prompt", b =>
@@ -930,6 +1089,16 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                     b.Navigation("Tag");
                 });
 
+            modelBuilder.Entity("JSCHUB.Domain.Entities.Proyecto", b =>
+                {
+                    b.HasOne("JSCHUB.Domain.Entities.Sprint", "SprintActivo")
+                        .WithOne()
+                        .HasForeignKey("JSCHUB.Domain.Entities.Proyecto", "SprintActivoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("SprintActivo");
+                });
+
             modelBuilder.Entity("JSCHUB.Domain.Entities.RecursoProyecto", b =>
                 {
                     b.HasOne("JSCHUB.Domain.Entities.Proyecto", "Proyecto")
@@ -968,6 +1137,28 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                     b.Navigation("Proyecto");
 
                     b.Navigation("ReminderItem");
+                });
+
+            modelBuilder.Entity("JSCHUB.Domain.Entities.Sprint", b =>
+                {
+                    b.HasOne("JSCHUB.Domain.Entities.Proyecto", "Proyecto")
+                        .WithMany("Sprints")
+                        .HasForeignKey("ProyectoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Proyecto");
+                });
+
+            modelBuilder.Entity("JSCHUB.Domain.Entities.SprintTareaHistorico", b =>
+                {
+                    b.HasOne("JSCHUB.Domain.Entities.Sprint", "Sprint")
+                        .WithMany("TareasHistorico")
+                        .HasForeignKey("SprintId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Sprint");
                 });
 
             modelBuilder.Entity("JSCHUB.Domain.Entities.UsuarioProyecto", b =>
@@ -1014,6 +1205,8 @@ namespace JSCHUB.Infrastructure.Data.Migrations
 
                     b.Navigation("ReminderItemsProyecto");
 
+                    b.Navigation("Sprints");
+
                     b.Navigation("UsuariosProyecto");
                 });
 
@@ -1022,6 +1215,13 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                     b.Navigation("Alerts");
 
                     b.Navigation("ReminderItemsProyecto");
+                });
+
+            modelBuilder.Entity("JSCHUB.Domain.Entities.Sprint", b =>
+                {
+                    b.Navigation("Tareas");
+
+                    b.Navigation("TareasHistorico");
                 });
 
             modelBuilder.Entity("JSCHUB.Domain.Entities.Tag", b =>

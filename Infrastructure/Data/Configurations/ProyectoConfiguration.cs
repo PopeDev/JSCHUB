@@ -71,5 +71,15 @@ public class ProyectoConfiguration : IEntityTypeConfiguration<Proyecto>
             .WithOne(x => x.Proyecto)
             .HasForeignKey(x => x.ProyectoId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // === Sprint Activo ===
+        builder.Property(x => x.SprintActivoId);
+
+        builder.HasOne(x => x.SprintActivo)
+            .WithOne()
+            .HasForeignKey<Proyecto>(x => x.SprintActivoId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasIndex(x => x.SprintActivoId);
     }
 }

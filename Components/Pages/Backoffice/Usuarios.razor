@@ -1,6 +1,7 @@
 @page "/backoffice/usuarios"
 @using JSCHUB.Application.DTOs
 @using JSCHUB.Application.Interfaces
+@using JSCHUB.Domain.Enums
 @rendermode InteractiveServer
 
 <PageTitle>Usuarios - JSCHUB</PageTitle>
@@ -29,6 +30,7 @@
                 <MudTh>Nombre</MudTh>
                 <MudTh>Email</MudTh>
                 <MudTh>Teléfono</MudTh>
+                <MudTh>Proyectos</MudTh>
                 <MudTh>Estado</MudTh>
                 <MudTh Style="width: 180px">Acciones</MudTh>
             </HeaderContent>
@@ -57,6 +59,33 @@
                     }
                 </MudTd>
                 <MudTd>
+                    @if (context.Proyectos.Any())
+                    {
+                        <div class="d-flex flex-column gap-1">
+                            @foreach (var p in context.Proyectos)
+                            {
+                                <div class="d-flex align-center">
+                                    <MudText Typo="Typo.body2" Class="mr-1">• @p.Nombre</MudText>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" 
+                                             Color="@GetRolColor(p.Rol)" 
+                                             Style="height: 18px; font-size: 9px; margin: 0; padding: 0 4px;">
+                                        @p.Rol
+                                    </MudChip>
+                                    @if (p.EsGeneral)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Info" 
+                                                 Style="height: 18px; font-size: 10px; margin-left: 4px; margin-right: 0">General</MudChip>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <span class="mud-text-secondary">Sin proyectos</span>
+                    }
+                </MudTd>
+                <MudTd>
                     @if (context.Activo)
                     {
                         <MudChip T="string" Size="Size.Small" Color="Color.Success">Activo</MudChip>
@@ -67,6 +96,9 @@
                     }
                 </MudTd>
                 <MudTd>
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Folder"
+                                   Color="Color.Primary" Title="Gestionar Proyectos"
+                                   OnClick="@(() => OpenProyectosDialogAsync(context))" />
                     <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit"
                                    Href="@($"/backoffice/usuarios/{context.Id}/edit")"
                                    Title="Editar" />
@@ -112,6 +144,7 @@
 @code {
     [Inject] private IUsuarioService UsuarioService { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
 
     private bool _loading = true;
     private List<UsuarioDto> _usuarios = [];
@@ -145,6 +178,24 @@
         await LoadDataAsync();
     }
 
+    private async Task OpenProyectosDialogAsync(UsuarioDto usuario)
+    {
+        var parameters = new DialogParameters<UsuarioProyectosDialog>
+        {
+            { x => x.UsuarioId, usuario.Id },
+            { x => x.UsuarioNombre, usuario.Nombre }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        await DialogService.ShowAsync<UsuarioProyectosDialog>($"Proyectos de {usuario.Nombre}", parameters, options);
+    }
+
     private async Task ConfirmDeleteAsync(UsuarioDto usuario)
     {
         _usuarioToDelete = usuario;
@@ -169,4 +220,12 @@
             Snackbar.Add($"Error: {ex.Message}", MudBlazor.Severity.Error);
         }
     }
+
+    private Color GetRolColor(RolProyecto rol) => rol switch
+    {
+        RolProyecto.Admin => Color.Error,
+        RolProyecto.Miembro => Color.Success,
+        RolProyecto.Viewer => Color.Default,
+        _ => Color.Default
+    };
 }

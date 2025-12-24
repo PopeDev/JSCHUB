@@ -94,6 +94,7 @@
 @code {
     [Inject] private ITagService TagService { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private ILogger<Tags> Logger { get; set; } = default!;
 
     private bool _loading = true;
     private List<TagDto> _tags = [];
@@ -102,7 +103,15 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadDataAsync();
+        try
+        {
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initializing Tags page");
+            Snackbar.Add($"Error al cargar la página: {ex.Message}", MudBlazor.Severity.Error);
+        }
     }
 
     private async Task LoadDataAsync()
@@ -112,6 +121,12 @@
         {
             _tags = (await TagService.GetAllAsync()).ToList();
         }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading tags data");
+            Snackbar.Add($"Error al cargar tags: {ex.Message}", MudBlazor.Severity.Error);
+            _tags = [];
+        }
         finally
         {
             _loading = false;
@@ -120,11 +135,18 @@
 
     private async Task ToggleActivoAsync(Guid id)
     {
-        var tag = _tags.First(t => t.Id == id);
-        var nuevoEstado = tag.Activo ? "desactivado" : "activado";
-        await TagService.ToggleActivoAsync(id);
-        Snackbar.Add($"Tag {nuevoEstado}", MudBlazor.Severity.Success);
-        await LoadDataAsync();
+        try
+        {
+            var tag = _tags.First(t => t.Id == id);
+            var nuevoEstado = tag.Activo ? "desactivado" : "activado";
+            await TagService.ToggleActivoAsync(id);
+            Snackbar.Add($"Tag {nuevoEstado}", MudBlazor.Severity.Success);
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al cambiar estado: {ex.Message}", MudBlazor.Severity.Error);
+        }
     }
 
     private async Task ConfirmDeleteAsync(TagDto tag)

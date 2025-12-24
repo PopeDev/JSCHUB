@@ -56,6 +56,9 @@ public class KanbanTaskDto
     public PrioridadTarea Prioridad { get; set; }
     public decimal HorasEstimadas { get; set; }
     public int Posicion { get; set; }
+    public Guid? SprintId { get; set; }
+    public bool EsComprometida { get; set; }
+    public int SprintsTranscurridos { get; set; }
     public string CreadoPor { get; set; } = string.Empty;
     public DateTime CreadoEl { get; set; }
     public string ModificadoPor { get; set; } = string.Empty;
@@ -105,5 +108,7 @@ public record MoveKanbanTaskDto(
 public record KanbanBoardDto(
     Guid ProyectoId,
     string ProyectoNombre,
+    Guid? SprintActivoId,
+    string? SprintActivoNombre,
     IEnumerable<KanbanColumnDto> Columnas
 );

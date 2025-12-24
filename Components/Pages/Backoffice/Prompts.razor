@@ -26,18 +26,18 @@
                               OnKeyDown="@OnSearchKeyDown" />
             </MudItem>
             <MudItem xs="12" sm="3">
-                <MudSelect @bind-Value="_selectedToolId" Label="Herramienta" Clearable="true">
+                <MudSelect T="Guid?" @bind-Value="_selectedToolId" Label="Herramienta" Clearable="true">
                     @foreach (var tool in _tools)
                     {
-                        <MudSelectItem Value="@tool.Id">@tool.Name</MudSelectItem>
+                        <MudSelectItem T="Guid?" Value="@((Guid?)tool.Id)">@tool.Name</MudSelectItem>
                     }
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" sm="3">
-                <MudSelect @bind-Value="_selectedTagId" Label="Tag" Clearable="true">
+                <MudSelect T="Guid?" @bind-Value="_selectedTagId" Label="Tag" Clearable="true">
                     @foreach (var tag in _tags)
                     {
-                        <MudSelectItem Value="@tag.Id">@tag.Name</MudSelectItem>
+                        <MudSelectItem T="Guid?" Value="@((Guid?)tag.Id)">@tag.Name</MudSelectItem>
                     }
                 </MudSelect>
             </MudItem>
@@ -179,6 +179,7 @@
     {
         try
         {
+            _loading = true;
             await LoadFiltersAsync();
             await LoadDataAsync();
         }
@@ -186,7 +187,11 @@
         {
             Logger.LogError(ex, "Error initializing Prompts page");
             Snackbar.Add($"Error crítico al cargar la página: {ex.Message}", MudBlazor.Severity.Error);
+        }
+        finally
+        {
             _loading = false;
+            StateHasChanged();
         }
     }
 
@@ -194,27 +199,30 @@
     {
         try 
         {
-            _tools = (await ToolService.GetActivosAsync()).ToList();
-            _tags = (await TagService.GetActivosAsync()).ToList();
+            var tools = await ToolService.GetActivosAsync();
+            _tools = tools?.ToList() ?? [];
+
+            var tags = await TagService.GetActivosAsync();
+            _tags = tags?.ToList() ?? [];
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading filters");
-            // Non-critical, but good to know
+            // Non-critical
         }
     }
 
     private async Task LoadDataAsync()
     {
-        _loading = true;
         try
         {
-            _prompts = (await PromptService.SearchAsync(
+            var results = await PromptService.SearchAsync(
                 searchText: _searchText,
                 toolId: _selectedToolId,
                 tagId: _selectedTagId,
                 incluirInactivos: true
-            )).ToList();
+            );
+            _prompts = results?.ToList() ?? [];
         }
         catch (Exception ex)
         {
@@ -222,15 +230,20 @@
             Snackbar.Add($"Error al cargar prompts: {ex.Message}", MudBlazor.Severity.Error);
             _prompts = [];
         }
-        finally
-        {
-            _loading = false;
-        }
     }
 
     private async Task SearchAsync()
     {
-        await LoadDataAsync();
+        _loading = true;
+        try
+        {
+            await LoadDataAsync();
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
     }
 
     private async Task ClearFilters()
@@ -238,7 +251,7 @@
         _searchText = null;
         _selectedToolId = null;
         _selectedTagId = null;
-        await LoadDataAsync();
+        await SearchAsync();
     }
 
     private async Task OnSearchKeyDown(KeyboardEventArgs e)
@@ -257,7 +270,7 @@
             var nuevoEstado = prompt.Activo ? "desactivado" : "activado";
             await PromptService.ToggleActivoAsync(id);
             Snackbar.Add($"Prompt {nuevoEstado}", MudBlazor.Severity.Success);
-            await LoadDataAsync();
+            await SearchAsync();
         }
         catch (Exception ex)
         {
@@ -282,7 +295,7 @@
         {
             await PromptService.DeleteAsync(id);
             Snackbar.Add("Prompt eliminado", MudBlazor.Severity.Success);
-            await LoadDataAsync();
+            await SearchAsync();
         }
         catch (Exception ex)
         {

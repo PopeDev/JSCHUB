@@ -8,6 +8,7 @@ using JSCHUB.Infrastructure.Repositories;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
+using Microsoft.AspNetCore.Components.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,6 +33,7 @@ builder.Services.AddScoped<IUsuarioProyectoRepository, UsuarioProyectoRepository
 builder.Services.AddScoped<IToolRepository, ToolRepository>();
 builder.Services.AddScoped<ITagRepository, TagRepository>();
 builder.Services.AddScoped<IPromptRepository, PromptRepository>();
+builder.Services.AddScoped<ISprintRepository, SprintRepository>();
 
 // Add Services
 builder.Services.AddScoped<IReminderService, ReminderService>();
@@ -47,11 +49,16 @@ builder.Services.AddScoped<IUsuarioProyectoService, UsuarioProyectoService>();
 builder.Services.AddScoped<IToolService, ToolService>();
 builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<IPromptService, PromptService>();
+builder.Services.AddScoped<ISprintService, SprintService>();
 
 // Add Authentication Services (Scoped para aislamiento de sesión por circuito)
 builder.Services.AddScoped<JSCHUB.Infrastructure.Services.AuthService>();
+builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<JSCHUB.Infrastructure.Services.AuthService>());
 builder.Services.AddScoped<IAuthService>(sp => sp.GetRequiredService<JSCHUB.Infrastructure.Services.AuthService>());
 builder.Services.AddScoped<ICurrentUserService>(sp => sp.GetRequiredService<JSCHUB.Infrastructure.Services.AuthService>());
+
+builder.Services.AddAuthorizationCore();
+builder.Services.AddCascadingAuthenticationState();
 
 // Add Validators
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();

@@ -1,4 +1,6 @@
 using JSCHUB.Application.Interfaces;
+using Microsoft.AspNetCore.Components.Authorization;
+using System.Security.Claims;
 
 namespace JSCHUB.Infrastructure.Services;
 
@@ -6,12 +8,10 @@ namespace JSCHUB.Infrastructure.Services;
 /// Servicio de autenticación con credenciales hardcodeadas (PoC)
 /// Implementa tanto IAuthService como ICurrentUserService para mantener
 /// el estado de sesión centralizado.
+/// También actúa como AuthenticationStateProvider para Blazor.
 /// </summary>
-public class AuthService : IAuthService, ICurrentUserService
+public class AuthService : AuthenticationStateProvider, IAuthService, ICurrentUserService
 {
-    /// <summary>
-    /// Usuarios válidos con sus contraseñas
-    /// </summary>
     private static readonly Dictionary<string, string> ValidCredentials = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Javi"] = "123456",
@@ -19,18 +19,18 @@ public class AuthService : IAuthService, ICurrentUserService
         ["Carlos"] = "010203"
     };
 
-    /// <summary>
-    /// Usuario actual de la sesión (almacenamiento en memoria)
-    /// </summary>
     private string? _currentUser;
+    private ClaimsPrincipal _currentUserPrincipal = new(new ClaimsIdentity());
 
-    /// <inheritdoc />
     public string? CurrentUserName => _currentUser;
 
-    /// <inheritdoc />
     public bool IsAuthenticated => !string.IsNullOrEmpty(_currentUser);
 
-    /// <inheritdoc />
+    public override Task<AuthenticationState> GetAuthenticationStateAsync()
+    {
+        return Task.FromResult(new AuthenticationState(_currentUserPrincipal));
+    }
+
     public Task<AuthResult> LoginAsync(string username, string password)
     {
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
@@ -38,13 +38,21 @@ public class AuthService : IAuthService, ICurrentUserService
             return Task.FromResult(new AuthResult(false, null, "Usuario o contraseña incorrectos"));
         }
 
-        // Buscar usuario válido (case-insensitive para el nombre)
-        if (ValidCredentials.TryGetValue(username.Trim(), out var expectedPassword) 
-            && password == expectedPassword)
+        if (ValidCredentials.TryGetValue(username.Trim(), out var expectedPassword) && password == expectedPassword)
         {
-            // Guardar el nombre con la capitalización correcta
-            _currentUser = ValidCredentials.Keys.First(k => 
-                k.Equals(username.Trim(), StringComparison.OrdinalIgnoreCase));
+            // 1. Actualizar estado interno
+            _currentUser = ValidCredentials.Keys.First(k => k.Equals(username.Trim(), StringComparison.OrdinalIgnoreCase));
+            
+            // 2. Crear ClaimsPrincipal
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Name, _currentUser)
+            };
+            var identity = new ClaimsIdentity(claims, "CustomAuth");
+            _currentUserPrincipal = new ClaimsPrincipal(identity);
+
+            // 3. Notificar a Blazor
+            NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
             
             return Task.FromResult(new AuthResult(true, _currentUser, null));
         }
@@ -52,10 +60,15 @@ public class AuthService : IAuthService, ICurrentUserService
         return Task.FromResult(new AuthResult(false, null, "Usuario o contraseña incorrectos"));
     }
 
-    /// <inheritdoc />
     public Task LogoutAsync()
     {
+        // 1. Limpiar estado
         _currentUser = null;
+        _currentUserPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
+
+        // 2. Notificar a Blazor
+        NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
+
         return Task.CompletedTask;
     }
 }
