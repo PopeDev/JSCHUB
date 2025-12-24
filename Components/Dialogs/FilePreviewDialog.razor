@@ -1,0 +1,138 @@
+@using MudBlazor
+@using JSCHUB.Application.Storage.DTOs
+
+<MudDialog Style="max-width: 90vw; max-height: 90vh;">
+    <TitleContent>
+        <div class="d-flex align-center justify-space-between" style="width: 100%;">
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@GetIcon()" Class="mr-2" />
+                @Item?.Name
+            </MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <div style="min-width: 400px; min-height: 300px;">
+            @if (Item != null)
+            {
+                @if (Item.HasThumbnail)
+                {
+                    <div class="d-flex justify-center">
+                        <img src="@GetPreviewUrl()"
+                             alt="@Item.Name"
+                             style="max-width: 100%; max-height: 60vh; object-fit: contain;" />
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex flex-column align-center justify-center pa-8">
+                        <MudIcon Icon="@GetIcon()" Style="font-size: 6rem;" Color="Color.Secondary" />
+                        <MudText Typo="Typo.h6" Class="mt-4">Vista previa no disponible</MudText>
+                    </div>
+                }
+
+                <MudDivider Class="my-4" />
+
+                <MudSimpleTable Dense="true" Hover="true">
+                    <tbody>
+                        <tr>
+                            <td><strong>Nombre</strong></td>
+                            <td>@Item.Name</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Ruta</strong></td>
+                            <td>@Item.Path</td>
+                        </tr>
+                        @if (Item.SizeBytes.HasValue)
+                        {
+                            <tr>
+                                <td><strong>Tamaño</strong></td>
+                                <td>@FormatSize(Item.SizeBytes.Value)</td>
+                            </tr>
+                        }
+                        @if (!string.IsNullOrEmpty(Item.ContentType))
+                        {
+                            <tr>
+                                <td><strong>Tipo</strong></td>
+                                <td>@Item.ContentType</td>
+                            </tr>
+                        }
+                        <tr>
+                            <td><strong>Modificado</strong></td>
+                            <td>@Item.LastModifiedUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</td>
+                        </tr>
+                    </tbody>
+                </MudSimpleTable>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cerrar</MudButton>
+        <MudButton Href="@DownloadUrl"
+                   Target="_blank"
+                   Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   StartIcon="@Icons.Material.Filled.Download">
+            Descargar
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public StorageItemDto? Item { get; set; }
+
+    [Parameter]
+    public string DownloadUrl { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ThumbnailUrl { get; set; } = string.Empty;
+
+    private string GetPreviewUrl()
+    {
+        // Para preview, usamos la URL de descarga con inline
+        if (Item?.HasThumbnail == true)
+        {
+            return DownloadUrl + (DownloadUrl.Contains("?") ? "&" : "?") + "inline=true";
+        }
+        return string.Empty;
+    }
+
+    private string GetIcon()
+    {
+        if (Item == null) return Icons.Material.Filled.InsertDriveFile;
+
+        return Item.Extension?.ToLowerInvariant() switch
+        {
+            "pdf" => Icons.Material.Filled.PictureAsPdf,
+            "doc" or "docx" => Icons.Material.Filled.Description,
+            "xls" or "xlsx" => Icons.Material.Filled.TableChart,
+            "ppt" or "pptx" => Icons.Material.Filled.Slideshow,
+            "zip" or "rar" or "7z" or "tar" or "gz" => Icons.Material.Filled.FolderZip,
+            "mp3" or "wav" or "ogg" or "flac" => Icons.Material.Filled.AudioFile,
+            "mp4" or "avi" or "mkv" or "mov" or "webm" => Icons.Material.Filled.VideoFile,
+            "jpg" or "jpeg" or "png" or "gif" or "webp" or "bmp" or "svg" => Icons.Material.Filled.Image,
+            "txt" or "md" or "log" => Icons.Material.Filled.TextSnippet,
+            "html" or "htm" or "css" or "js" or "ts" or "json" or "xml" => Icons.Material.Filled.Code,
+            "cs" or "java" or "py" or "rb" or "php" or "go" or "rs" => Icons.Material.Filled.Code,
+            _ => Icons.Material.Filled.InsertDriveFile
+        };
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        int order = 0;
+        double size = bytes;
+        while (size >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            size /= 1024;
+        }
+        return $"{size:0.##} {sizes[order]}";
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

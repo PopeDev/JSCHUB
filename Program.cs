@@ -1,10 +1,14 @@
 using JSCHUB.Components;
 using JSCHUB.Application.Interfaces;
 using JSCHUB.Application.Services;
+using JSCHUB.Application.Storage.DTOs;
+using JSCHUB.Application.Storage.Interfaces;
 using JSCHUB.Domain.Interfaces;
+using JSCHUB.Infrastructure.Api;
 using JSCHUB.Infrastructure.BackgroundServices;
 using JSCHUB.Infrastructure.Data;
 using JSCHUB.Infrastructure.Repositories;
+using JSCHUB.Infrastructure.Storage;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
@@ -66,6 +70,11 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 // Add Background Services
 builder.Services.AddHostedService<AlertGeneratorService>();
 
+// Add File Storage
+builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection(StorageOptions.SectionName));
+builder.Services.AddScoped<IFileStorage, LocalDiskFileStorage>();
+builder.Services.AddScoped<IFileManagerService, FileManagerService>();
+
 // Add Razor Components
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -94,6 +103,9 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+// Map Files API endpoints
+app.MapFilesEndpoints();
 
 app.Run();
 

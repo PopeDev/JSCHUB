@@ -1,0 +1,89 @@
+@using MudBlazor
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.CreateNewFolder" Class="mr-2" />
+            Nueva Carpeta
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_folderName"
+                      Label="Nombre de la carpeta"
+                      Placeholder="Mi carpeta"
+                      Variant="Variant.Outlined"
+                      Immediate="true"
+                      AutoFocus="true"
+                      HelperText="@_errorMessage"
+                      Error="@(!string.IsNullOrEmpty(_errorMessage))"
+                      OnKeyDown="HandleKeyDown" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancelar</MudButton>
+        <MudButton OnClick="Submit"
+                   Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   Disabled="@(!IsValid)">
+            Crear
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public string CurrentPath { get; set; } = string.Empty;
+
+    private string _folderName = string.Empty;
+    private string _errorMessage = string.Empty;
+
+    private bool IsValid => !string.IsNullOrWhiteSpace(_folderName) && string.IsNullOrEmpty(_errorMessage);
+
+    private void Validate()
+    {
+        _errorMessage = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(_folderName))
+        {
+            _errorMessage = "El nombre no puede estar vacío.";
+            return;
+        }
+
+        var invalidChars = Path.GetInvalidFileNameChars();
+        if (_folderName.IndexOfAny(invalidChars) >= 0)
+        {
+            _errorMessage = "El nombre contiene caracteres inválidos.";
+            return;
+        }
+
+        if (_folderName.StartsWith('.'))
+        {
+            _errorMessage = "El nombre no puede comenzar con punto.";
+            return;
+        }
+    }
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && IsValid)
+        {
+            Submit();
+        }
+    }
+
+    private void Submit()
+    {
+        Validate();
+        if (!IsValid) return;
+
+        var fullPath = string.IsNullOrEmpty(CurrentPath)
+            ? _folderName
+            : $"{CurrentPath}/{_folderName}";
+
+        MudDialog.Close(DialogResult.Ok(fullPath));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

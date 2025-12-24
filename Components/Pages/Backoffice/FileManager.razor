@@ -1,0 +1,493 @@
+@page "/backoffice/files"
+@page "/backoffice/files/{**Path}"
+@using JSCHUB.Application.Services
+@using JSCHUB.Application.Storage.DTOs
+@using JSCHUB.Application.Storage.Exceptions
+@using JSCHUB.Components.Dialogs
+@using Microsoft.AspNetCore.Components.Forms
+@rendermode InteractiveServer
+
+<PageTitle>Gestor de Archivos - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    @* Header *@
+    <div class="d-flex justify-space-between align-center mb-4 flex-wrap gap-2">
+        <MudText Typo="Typo.h4">
+            <MudIcon Icon="@Icons.Material.Filled.Folder" Class="mr-2" />
+            Gestor de Archivos
+        </MudText>
+        <div class="d-flex gap-2">
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.CreateNewFolder"
+                       OnClick="OpenCreateFolderDialog">
+                Nueva Carpeta
+            </MudButton>
+            <MudFileUpload T="IReadOnlyList<IBrowserFile>"
+                           FilesChanged="HandleFilesUpload"
+                           MaximumFileCount="10"
+                           Accept="*/*">
+                <ActivatorContent>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.CloudUpload"
+                               Disabled="@_isUploading">
+                        @if (_isUploading)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            @:Subiendo...
+                        }
+                        else
+                        {
+                            @:Subir Archivos
+                        }
+                    </MudButton>
+                </ActivatorContent>
+            </MudFileUpload>
+        </div>
+    </div>
+
+    @* Breadcrumb *@
+    <MudPaper Class="pa-3 mb-4" Elevation="1">
+        <MudBreadcrumbs Items="_breadcrumbs">
+            <ItemTemplate Context="item">
+                <MudLink Color="Color.Primary"
+                         Underline="Underline.Hover"
+                         OnClick="@(() => NavigateToPath(item.Href ?? ""))">
+                    @item.Text
+                </MudLink>
+            </ItemTemplate>
+            <SeparatorTemplate>
+                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
+            </SeparatorTemplate>
+        </MudBreadcrumbs>
+    </MudPaper>
+
+    @* Content *@
+    <MudPaper Elevation="2">
+        @if (_isLoading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+            <div class="pa-8 d-flex justify-center">
+                <MudText>Cargando...</MudText>
+            </div>
+        }
+        else if (_items.Count == 0)
+        {
+            <div class="pa-8 d-flex flex-column align-center">
+                <MudIcon Icon="@Icons.Material.Filled.FolderOff"
+                         Style="font-size: 4rem;"
+                         Color="Color.Secondary" />
+                <MudText Typo="Typo.h6" Class="mt-4" Color="Color.Secondary">
+                    Esta carpeta está vacía
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Sube archivos o crea una carpeta para comenzar
+                </MudText>
+            </div>
+        }
+        else
+        {
+            <MudTable Items="@_items"
+                      Hover="true"
+                      Striped="true"
+                      Dense="true"
+                      RowClass="cursor-pointer"
+                      OnRowClick="HandleRowClick"
+                      T="StorageItemDto">
+                <HeaderContent>
+                    <MudTh Style="width: 60px;"></MudTh>
+                    <MudTh>
+                        <MudTableSortLabel SortBy="new Func<StorageItemDto, object>(x => x.Name)">
+                            Nombre
+                        </MudTableSortLabel>
+                    </MudTh>
+                    <MudTh Style="width: 120px;">
+                        <MudTableSortLabel SortBy="new Func<StorageItemDto, object>(x => x.SizeBytes ?? 0)">
+                            Tamaño
+                        </MudTableSortLabel>
+                    </MudTh>
+                    <MudTh Style="width: 180px;">
+                        <MudTableSortLabel SortBy="new Func<StorageItemDto, object>(x => x.LastModifiedUtc)">
+                            Modificado
+                        </MudTableSortLabel>
+                    </MudTh>
+                    <MudTh Style="width: 160px;">Acciones</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        @if (context.IsDirectory)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Folder" Color="Color.Warning" />
+                        }
+                        else if (context.HasThumbnail)
+                        {
+                            <MudImage Src="@FileManager.GetThumbnailUrl(context.Path, 48)"
+                                      Alt="@context.Name"
+                                      Width="40"
+                                      Height="40"
+                                      ObjectFit="ObjectFit.Cover"
+                                      Class="rounded" />
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@GetFileIcon(context.Extension)" Color="Color.Default" />
+                        }
+                    </MudTd>
+                    <MudTd>
+                        <MudText Typo="Typo.body2" Class="font-weight-medium">@context.Name</MudText>
+                        @if (!string.IsNullOrEmpty(context.ContentType) && !context.IsDirectory)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@context.ContentType</MudText>
+                        }
+                    </MudTd>
+                    <MudTd>
+                        @if (context.SizeBytes.HasValue)
+                        {
+                            <MudText Typo="Typo.body2">@FormatSize(context.SizeBytes.Value)</MudText>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">—</MudText>
+                        }
+                    </MudTd>
+                    <MudTd>
+                        <MudText Typo="Typo.body2">
+                            @context.LastModifiedUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                        </MudText>
+                    </MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Filled.DriveFileRenameOutline"
+                                       Size="Size.Small"
+                                       Title="Renombrar"
+                                       OnClick="@(() => OpenRenameDialog(context))"
+                                       OnClick:stopPropagation="true" />
+                        @if (!context.IsDirectory)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Download"
+                                           Size="Size.Small"
+                                           Title="Descargar"
+                                           Href="@FileManager.GetDownloadUrl(context.Path)"
+                                           Target="_blank"
+                                           OnClick:stopPropagation="true" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                           Size="Size.Small"
+                                           Title="Ver"
+                                           OnClick="@(() => OpenPreviewDialog(context))"
+                                           OnClick:stopPropagation="true" />
+                        }
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                       Size="Size.Small"
+                                       Color="Color.Error"
+                                       Title="Eliminar"
+                                       OnClick="@(() => OpenDeleteDialog(context))"
+                                       OnClick:stopPropagation="true" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudPaper>
+
+    @* Upload Progress *@
+    @if (_isUploading)
+    {
+        <MudPaper Class="pa-4 mt-4" Elevation="2">
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Subiendo archivos...</MudText>
+            <MudProgressLinear Value="@_uploadProgress" Color="Color.Primary" />
+            <MudText Typo="Typo.caption" Class="mt-1">@_uploadStatus</MudText>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    [Parameter]
+    public string? Path { get; set; }
+
+    [Inject]
+    private IFileManagerService FileManager { get; set; } = default!;
+
+    [Inject]
+    private IDialogService DialogService { get; set; } = default!;
+
+    [Inject]
+    private ISnackbar Snackbar { get; set; } = default!;
+
+    [Inject]
+    private NavigationManager Navigation { get; set; } = default!;
+
+    private List<StorageItemDto> _items = new();
+    private List<BreadcrumbItem> _breadcrumbs = new();
+    private bool _isLoading = true;
+    private bool _isUploading;
+    private double _uploadProgress;
+    private string _uploadStatus = string.Empty;
+
+    private string CurrentPath => Path ?? string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadItemsAsync();
+        UpdateBreadcrumbs();
+    }
+
+    private async Task LoadItemsAsync()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var items = await FileManager.ListAsync(CurrentPath);
+            _items = items.ToList();
+        }
+        catch (StorageItemNotFoundException)
+        {
+            Snackbar.Add("La carpeta no existe.", Severity.Error);
+            Navigation.NavigateTo("/backoffice/files");
+            return;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error cargando archivos: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void UpdateBreadcrumbs()
+    {
+        _breadcrumbs = new List<BreadcrumbItem>
+        {
+            new("Inicio", "", false, Icons.Material.Filled.Home)
+        };
+
+        if (!string.IsNullOrEmpty(CurrentPath))
+        {
+            var parts = CurrentPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            var accumulatedPath = string.Empty;
+
+            foreach (var part in parts)
+            {
+                accumulatedPath = string.IsNullOrEmpty(accumulatedPath) ? part : $"{accumulatedPath}/{part}";
+                _breadcrumbs.Add(new BreadcrumbItem(part, accumulatedPath, false, Icons.Material.Filled.Folder));
+            }
+        }
+    }
+
+    private void NavigateToPath(string path)
+    {
+        var url = string.IsNullOrEmpty(path) ? "/backoffice/files" : $"/backoffice/files/{path}";
+        Navigation.NavigateTo(url);
+    }
+
+    private void HandleRowClick(TableRowClickEventArgs<StorageItemDto> args)
+    {
+        if (args.Item.IsDirectory)
+        {
+            NavigateToPath(args.Item.Path);
+        }
+        else
+        {
+            _ = OpenPreviewDialog(args.Item);
+        }
+    }
+
+    private async Task HandleFilesUpload(IReadOnlyList<IBrowserFile> files)
+    {
+        if (files.Count == 0) return;
+
+        _isUploading = true;
+        _uploadProgress = 0;
+        StateHasChanged();
+
+        var totalFiles = files.Count;
+        var processedFiles = 0;
+
+        foreach (var file in files)
+        {
+            try
+            {
+                _uploadStatus = $"Subiendo: {file.Name}";
+                StateHasChanged();
+
+                // Límite de 100MB por archivo
+                const long maxFileSize = 100 * 1024 * 1024;
+                await using var stream = file.OpenReadStream(maxFileSize);
+
+                await FileManager.UploadAsync(CurrentPath, file.Name, stream, file.ContentType);
+
+                processedFiles++;
+                _uploadProgress = (double)processedFiles / totalFiles * 100;
+                StateHasChanged();
+
+                Snackbar.Add($"Archivo '{file.Name}' subido correctamente.", Severity.Success);
+            }
+            catch (StorageItemExistsException)
+            {
+                Snackbar.Add($"Ya existe un archivo con el nombre '{file.Name}'.", Severity.Warning);
+            }
+            catch (FileSizeExceededException)
+            {
+                Snackbar.Add($"El archivo '{file.Name}' excede el tamaño máximo permitido.", Severity.Error);
+            }
+            catch (ExtensionNotAllowedException ex)
+            {
+                Snackbar.Add($"Extensión no permitida: {ex.Message}", Severity.Error);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error subiendo '{file.Name}': {ex.Message}", Severity.Error);
+            }
+        }
+
+        _isUploading = false;
+        _uploadStatus = string.Empty;
+        await LoadItemsAsync();
+    }
+
+    private async Task OpenCreateFolderDialog()
+    {
+        var parameters = new DialogParameters<CreateFolderDialog>
+        {
+            { x => x.CurrentPath, CurrentPath }
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<CreateFolderDialog>("Nueva Carpeta", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false, Data: string folderPath })
+        {
+            try
+            {
+                await FileManager.CreateFolderAsync(folderPath);
+                Snackbar.Add("Carpeta creada correctamente.", Severity.Success);
+                await LoadItemsAsync();
+            }
+            catch (StorageItemExistsException)
+            {
+                Snackbar.Add("Ya existe una carpeta con ese nombre.", Severity.Warning);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error creando carpeta: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task OpenRenameDialog(StorageItemDto item)
+    {
+        var parameters = new DialogParameters<RenameDialog>
+        {
+            { x => x.OriginalName, item.Name },
+            { x => x.IsDirectory, item.IsDirectory }
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<RenameDialog>("Renombrar", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false, Data: string newName })
+        {
+            try
+            {
+                await FileManager.RenameAsync(item.Path, newName);
+                Snackbar.Add("Item renombrado correctamente.", Severity.Success);
+                await LoadItemsAsync();
+            }
+            catch (StorageItemExistsException)
+            {
+                Snackbar.Add("Ya existe un item con ese nombre.", Severity.Warning);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error renombrando: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task OpenDeleteDialog(StorageItemDto item)
+    {
+        var parameters = new DialogParameters<ConfirmDeleteDialog>
+        {
+            { x => x.ItemName, item.Name },
+            { x => x.IsDirectory, item.IsDirectory }
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small };
+        var dialog = await DialogService.ShowAsync<ConfirmDeleteDialog>("Confirmar eliminación", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is { Canceled: false, Data: bool recursive })
+        {
+            try
+            {
+                await FileManager.DeleteAsync(item.Path, recursive);
+                Snackbar.Add("Item eliminado correctamente.", Severity.Success);
+                await LoadItemsAsync();
+            }
+            catch (DirectoryNotEmptyException)
+            {
+                Snackbar.Add("La carpeta no está vacía. Selecciona 'eliminar recursivo'.", Severity.Warning);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error eliminando: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task OpenPreviewDialog(StorageItemDto item)
+    {
+        var parameters = new DialogParameters<FilePreviewDialog>
+        {
+            { x => x.Item, item },
+            { x => x.DownloadUrl, FileManager.GetDownloadUrl(item.Path) },
+            { x => x.ThumbnailUrl, FileManager.GetThumbnailUrl(item.Path, 512) }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true
+        };
+
+        await DialogService.ShowAsync<FilePreviewDialog>(item.Name, parameters, options);
+    }
+
+    private static string GetFileIcon(string? extension)
+    {
+        return extension?.ToLowerInvariant() switch
+        {
+            "pdf" => Icons.Material.Filled.PictureAsPdf,
+            "doc" or "docx" => Icons.Material.Filled.Description,
+            "xls" or "xlsx" => Icons.Material.Filled.TableChart,
+            "ppt" or "pptx" => Icons.Material.Filled.Slideshow,
+            "zip" or "rar" or "7z" or "tar" or "gz" => Icons.Material.Filled.FolderZip,
+            "mp3" or "wav" or "ogg" or "flac" => Icons.Material.Filled.AudioFile,
+            "mp4" or "avi" or "mkv" or "mov" or "webm" => Icons.Material.Filled.VideoFile,
+            "jpg" or "jpeg" or "png" or "gif" or "webp" or "bmp" or "svg" => Icons.Material.Filled.Image,
+            "txt" or "md" or "log" => Icons.Material.Filled.TextSnippet,
+            "html" or "htm" or "css" or "js" or "ts" or "json" or "xml" => Icons.Material.Filled.Code,
+            "cs" or "java" or "py" or "rb" or "php" or "go" or "rs" => Icons.Material.Filled.Code,
+            _ => Icons.Material.Filled.InsertDriveFile
+        };
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        int order = 0;
+        double size = bytes;
+        while (size >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            size /= 1024;
+        }
+        return $"{size:0.##} {sizes[order]}";
+    }
+}

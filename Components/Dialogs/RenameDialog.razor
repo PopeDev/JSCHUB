@@ -1,0 +1,103 @@
+@using MudBlazor
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.DriveFileRenameOutline" Class="mr-2" />
+            Renombrar
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-4" Color="Color.Secondary">
+            Renombrando: @OriginalName
+        </MudText>
+        <MudTextField @bind-Value="_newName"
+                      Label="Nuevo nombre"
+                      Variant="Variant.Outlined"
+                      Immediate="true"
+                      AutoFocus="true"
+                      HelperText="@_errorMessage"
+                      Error="@(!string.IsNullOrEmpty(_errorMessage))"
+                      OnKeyDown="HandleKeyDown" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancelar</MudButton>
+        <MudButton OnClick="Submit"
+                   Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   Disabled="@(!IsValid)">
+            Renombrar
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public string OriginalName { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool IsDirectory { get; set; }
+
+    private string _newName = string.Empty;
+    private string _errorMessage = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        _newName = OriginalName;
+    }
+
+    private bool IsValid => !string.IsNullOrWhiteSpace(_newName)
+                           && _newName != OriginalName
+                           && string.IsNullOrEmpty(_errorMessage);
+
+    private void Validate()
+    {
+        _errorMessage = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(_newName))
+        {
+            _errorMessage = "El nombre no puede estar vacío.";
+            return;
+        }
+
+        if (_newName == OriginalName)
+        {
+            _errorMessage = "El nombre es igual al original.";
+            return;
+        }
+
+        var invalidChars = Path.GetInvalidFileNameChars();
+        if (_newName.IndexOfAny(invalidChars) >= 0)
+        {
+            _errorMessage = "El nombre contiene caracteres inválidos.";
+            return;
+        }
+
+        if (_newName.StartsWith('.'))
+        {
+            _errorMessage = "El nombre no puede comenzar con punto.";
+            return;
+        }
+    }
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && IsValid)
+        {
+            Submit();
+        }
+    }
+
+    private void Submit()
+    {
+        Validate();
+        if (!IsValid) return;
+
+        MudDialog.Close(DialogResult.Ok(_newName));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}
