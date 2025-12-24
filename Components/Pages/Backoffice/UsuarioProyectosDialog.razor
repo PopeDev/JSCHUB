@@ -1,0 +1,181 @@
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@using JSCHUB.Domain.Enums
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        }
+        else
+        {
+            <MudText Typo="Typo.subtitle1" Class="mb-3">
+                Proyectos asignados a <strong>@UsuarioNombre</strong>
+            </MudText>
+
+            @if (_proyectosAsignados.Any())
+            {
+                <MudTable Items="_proyectosAsignados" Hover="true" Dense="true" Elevation="0" Class="mb-4">
+                    <HeaderContent>
+                        <MudTh>Proyecto</MudTh>
+                        <MudTh Style="width: 140px">Rol</MudTh>
+                        <MudTh Style="width: 50px"></MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd>
+                            @context.Nombre
+                            @if (context.EsGeneral)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="ml-2">General</MudChip>
+                            }
+                        </MudTd>
+                        <MudTd>
+                            <MudSelect T="RolProyecto" Value="context.Rol" Dense="true" Margin="Margin.Dense"
+                                       ValueChanged="@(newRol => OnRolChanged(context, newRol))">
+                                @foreach (RolProyecto rol in Enum.GetValues<RolProyecto>())
+                                {
+                                    <MudSelectItem T="RolProyecto" Value="@rol">@rol</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudTd>
+                        <MudTd>
+                            <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.LinkOff"
+                                           Color="@(context.EsGeneral ? Color.Default : Color.Error)"
+                                           Disabled="context.EsGeneral"
+                                           Title="@(context.EsGeneral ? "No se puede desasignar del proyecto general" : "Desasignar")"
+                                           OnClick="@(() => DesasignarAsync(context))" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info" Class="mb-4">
+                    Este usuario no tiene proyectos asignados.
+                </MudAlert>
+            }
+
+            <MudDivider Class="my-3" />
+
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Asignar nuevo proyecto</MudText>
+            <div class="d-flex gap-2 align-center">
+                <MudSelect T="Guid?" @bind-Value="_nuevoProyectoId" Label="Proyecto" Class="flex-grow-1"
+                           Disabled="_proyectosDisponibles.Count == 0">
+                    @foreach (var p in _proyectosDisponibles)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)p.Id)">@p.Nombre</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudSelect T="RolProyecto" @bind-Value="_nuevoRol" Label="Rol" Style="width: 120px">
+                    @foreach (RolProyecto rol in Enum.GetValues<RolProyecto>())
+                    {
+                        <MudSelectItem T="RolProyecto" Value="@rol">@rol</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                           Disabled="!_nuevoProyectoId.HasValue || _saving"
+                           OnClick="AsignarNuevoAsync">
+                    @if (_saving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" /> }
+                    else { <MudIcon Icon="@Icons.Material.Filled.Add" /> }
+                </MudButton>
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Cerrar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid UsuarioId { get; set; }
+    [Parameter] public string UsuarioNombre { get; set; } = string.Empty;
+
+    [Inject] private IUsuarioProyectoService UsuarioProyectoService { get; set; } = default!;
+    [Inject] private IProyectoService ProyectoService { get; set; } = default!;
+    [Inject] private ICurrentUserService CurrentUserService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private bool _loading = true;
+    private bool _saving;
+    private List<ProyectoAsignadoDto> _proyectosAsignados = [];
+    private List<ProyectoDto> _todosProyectos = [];
+    private List<ProyectoDto> _proyectosDisponibles = [];
+
+    private Guid? _nuevoProyectoId;
+    private RolProyecto _nuevoRol = RolProyecto.Miembro;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+        _loading = false;
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _proyectosAsignados = (await UsuarioProyectoService.GetProyectosDelUsuarioAsync(UsuarioId)).ToList();
+        _todosProyectos = (await ProyectoService.SearchAsync(take: 1000)).ToList();
+        
+        // Calcular proyectos disponibles (no asignados aún)
+        var idsAsignados = _proyectosAsignados.Select(p => p.Id).ToHashSet();
+        _proyectosDisponibles = _todosProyectos.Where(p => !idsAsignados.Contains(p.Id)).ToList();
+        _nuevoProyectoId = null;
+    }
+
+    private async Task OnRolChanged(ProyectoAsignadoDto proyecto, RolProyecto nuevoRol)
+    {
+        try
+        {
+            await UsuarioProyectoService.ActualizarRolAsync(new ActualizarRolUsuarioProyectoDto(
+                UsuarioId, proyecto.Id, nuevoRol));
+            Snackbar.Add($"Rol actualizado a {nuevoRol}", MudBlazor.Severity.Success);
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", MudBlazor.Severity.Error);
+        }
+    }
+
+    private async Task DesasignarAsync(ProyectoAsignadoDto proyecto)
+    {
+        try
+        {
+            await UsuarioProyectoService.DesasignarUsuarioAsync(UsuarioId, proyecto.Id);
+            Snackbar.Add($"Usuario desasignado de {proyecto.Nombre}", MudBlazor.Severity.Success);
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", MudBlazor.Severity.Error);
+        }
+    }
+
+    private async Task AsignarNuevoAsync()
+    {
+        if (!_nuevoProyectoId.HasValue) return;
+
+        _saving = true;
+        try
+        {
+            var asignadoPor = CurrentUserService.CurrentUserName ?? "sistema";
+            await UsuarioProyectoService.AsignarUsuarioAsync(
+                new AsignarUsuarioProyectoDto(UsuarioId, _nuevoProyectoId.Value, _nuevoRol),
+                asignadoPor);
+            Snackbar.Add("Proyecto asignado correctamente", MudBlazor.Severity.Success);
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", MudBlazor.Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void Close() => MudDialog.Close();
+}

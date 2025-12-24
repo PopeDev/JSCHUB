@@ -1,0 +1,264 @@
+@page "/backoffice/proyectos/{ProyectoId:guid}/sprints"
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@using JSCHUB.Domain.Enums
+@rendermode InteractiveServer
+
+<PageTitle>Sprints - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
+    <MudText Typo="Typo.h5" GutterBottom="true" Class="mb-4">Gestión de Sprints</MudText>
+
+    @if (_loading)
+    {
+        <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+    }
+    else
+    {
+        <MudPaper Elevation="1" Class="pa-4 mb-4">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+                <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="@($"/backoffice/proyectos/{ProyectoId}/pizarra")" Variant="Variant.Text">Volver al Tablero</MudButton>
+                <MudButton StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Filled" Color="Color.Primary" OnClick="CheckAndOpenCreateDialog">Nuevo Sprint</MudButton>
+            </MudStack>
+
+            <MudTable Items="@_sprints" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0">
+                <HeaderContent>
+                    <MudTh>Nombre</MudTh>
+                    <MudTh>Estado</MudTh>
+                    <MudTh>Fechas</MudTh>
+                    <MudTh>Métricas</MudTh>
+                    <MudTh>Acciones</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Nombre">
+                        <MudText Typo="Typo.subtitle2">@context.Nombre</MudText>
+                        <MudText Typo="Typo.caption">@context.Temporizacion</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Estado">
+                        @if (context.Estado == EstadoSprint.Activo)
+                        {
+                            <MudChip T="string" Color="Color.Success" Size="Size.Small">ACTIVO</MudChip>
+                        }
+                        else if (context.Estado == EstadoSprint.Cerrado)
+                        {
+                            <MudChip T="string" Color="Color.Default" Size="Size.Small" Variant="Variant.Outlined">CERRADO</MudChip>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Color="Color.Info" Size="Size.Small">PENDIENTE</MudChip>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Fechas">
+                        @context.FechaInicio.ToShortDateString() - @context.FechaFin.ToShortDateString()
+                    </MudTd>
+                    <MudTd DataLabel="Métricas">
+                        @if (context.Estado == EstadoSprint.Cerrado)
+                        {
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.caption"><b>@((context.PorcentajeCompletitud ?? 0).ToString("0"))%</b> completado</MudText>
+                                <MudText Typo="Typo.caption">@context.TareasEntregadas entregadas</MudText>
+                            </MudStack>
+                        }
+                        else if (context.Estado == EstadoSprint.Activo)
+                        {
+                            <MudText Typo="Typo.caption">En curso...</MudText>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption">-</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Acciones">
+                        @if (context.Estado == EstadoSprint.Pendiente)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" Color="Color.Success" Size="Size.Small" Title="Activar (Iniciar)" OnClick="@(() => ActivarSprint(context))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => OpenEditDialog(context))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteSprint(context))" />
+                        }
+                        else if (context.Estado == EstadoSprint.Activo)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Stop" Color="Color.Warning" Size="Size.Small" Title="Cerrar Sprint" OnClick="@(() => CerrarSprintActual())" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => OpenEditDialog(context))" />
+                        }
+                        else if (context.Estado == EstadoSprint.Cerrado)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.History" Color="Color.Primary" Size="Size.Small" Title="Ver Histórico" OnClick="@(() => VerHistorico(context))" />
+                        }
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public Guid ProyectoId { get; set; }
+
+    [Inject] private ISprintService SprintService { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private ICurrentUserService CurrentUserService { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    private List<SprintDto> _sprints = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSprints();
+    }
+
+    private async Task LoadSprints()
+    {
+        _loading = true;
+        try
+        {
+            _sprints = (await SprintService.GetByProyectoIdAsync(ProyectoId)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al cargar sprints: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task CheckAndOpenCreateDialog()
+    {
+        // Verificar si hay sprint activo antes de dejar crear uno nuevo que solape?
+        // No bloqueamos la creación, solo la activación.
+        await OpenCreateDialog();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+         var parameters = new DialogParameters<SprintForm>
+        {
+            { x => x.Model, new UpdateSprintDto { FechaInicio = DateOnly.FromDateTime(DateTime.Today), FechaFin = DateOnly.FromDateTime(DateTime.Today.AddDays(14)) } }
+        };
+
+        var dialog = await DialogService.ShowAsync<SprintForm>("Nuevo Sprint", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is UpdateSprintDto data)
+        {
+            try
+            {
+                var createDto = new CreateSprintDto(ProyectoId, data.Nombre, data.Temporizacion, data.Objetivo, data.FechaInicio, data.FechaFin);
+                await SprintService.CreateAsync(createDto, CurrentUserService.CurrentUserName ?? "sistema");
+                Snackbar.Add("Sprint creado correctamente", Severity.Success);
+                await LoadSprints();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task OpenEditDialog(SprintDto sprint)
+    {
+        var parameters = new DialogParameters<SprintForm>
+        {
+            { x => x.Model, new UpdateSprintDto(sprint.Nombre, sprint.Temporizacion, sprint.Objetivo, sprint.FechaInicio, sprint.FechaFin) }
+        };
+
+        var dialog = await DialogService.ShowAsync<SprintForm>("Editar Sprint", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is UpdateSprintDto data)
+        {
+            try
+            {
+                await SprintService.UpdateAsync(sprint.Id, data, CurrentUserService.CurrentUserName ?? "sistema");
+                Snackbar.Add("Sprint actualizado correctamente", Severity.Success);
+                await LoadSprints();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task DeleteSprint(SprintDto sprint)
+    {
+        var confirm = await DialogService.ShowMessageBox(
+            "Eliminar Sprint", 
+            $"¿Estás seguro de eliminar el sprint '{sprint.Nombre}'?", 
+            yesText: "Eliminar", cancelText: "Cancelar");
+
+        if (confirm == true)
+        {
+            try
+            {
+                await SprintService.DeleteAsync(sprint.Id);
+                Snackbar.Add("Sprint eliminado", Severity.Success);
+                await LoadSprints();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task ActivarSprint(SprintDto sprint)
+    {
+        try
+        {
+            await SprintService.ActivarSprintAsync(sprint.Id, CurrentUserService.CurrentUserName ?? "sistema");
+            Snackbar.Add("Sprint activado correctamente", Severity.Success);
+            await LoadSprints();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task CerrarSprintActual()
+    {
+        // Obtener sprints pendientes para mostrar en el combo
+        var sprintsPendientes = _sprints.Where(s => s.Estado == EstadoSprint.Pendiente).OrderBy(s => s.FechaInicio).ToList();
+        
+        var parameters = new DialogParameters<CerrarSprintDialog>
+        {
+            { x => x.SprintsDisponibles, sprintsPendientes }
+        };
+
+        var dialog = await DialogService.ShowAsync<CerrarSprintDialog>("Cerrar Sprint Activo", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            var nextSprintId = result.Data as Guid?;
+            try
+            {
+                var cierreResult = await SprintService.CerrarSprintActivoAsync(ProyectoId, nextSprintId, CurrentUserService.CurrentUserName ?? "sistema");
+                Snackbar.Add($"Sprint cerrado. {cierreResult.TareasMovidas} tareas movidas.", Severity.Success);
+                await LoadSprints();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task VerHistorico(SprintDto sprint)
+    {
+         // Cargar detalles completos con histórico
+         var sprintFull = await SprintService.GetByIdAsync(sprint.Id);
+         if (sprintFull == null) return;
+         
+         var parameters = new DialogParameters<SprintHistorico>
+         {
+             { x => x.Sprint, sprintFull }
+         };
+         
+         await DialogService.ShowAsync<SprintHistorico>($"Histórico: {sprint.Nombre}", parameters, new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true});
+    }
+}

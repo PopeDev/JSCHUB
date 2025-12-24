@@ -1,0 +1,46 @@
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@using JSCHUB.Domain.Enums
+
+<MudDialog>
+    <DialogContent>
+        <MudAlert Severity="Severity.Warning" Class="mb-3">
+            Va a cerrar el sprint activo. Esta acción es irreversible.
+        </MudAlert>
+        
+        <MudText Typo="Typo.body1" Class="mb-2">
+            Las tareas que estén en la última columna se marcarán como <b>Entregadas</b>.
+        </MudText>
+        
+        <MudText Typo="Typo.body1" Class="mb-4">
+            Las tareas pendientes se moverán automáticamente al siguiente sprint seleccionado.
+        </MudText>
+
+        <MudSelect T="Guid?" Label="Siguiente Sprint (Destino de pendientes)" @bind-Value="SiguienteSprintId" AnchorOrigin="Origin.BottomCenter">
+            <MudSelectItem T="Guid?" Value="null">-- Ninguno (Mover al Backlog) --</MudSelectItem>
+            @foreach (var sprint in SprintsDisponibles)
+            {
+                <MudSelectItem T="Guid?" Value="sprint.Id">@sprint.Nombre (@sprint.Temporizacion)</MudSelectItem>
+            }
+        </MudSelect>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="Submit">Cerrar Sprint</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    
+    [Parameter] public List<SprintDto> SprintsDisponibles { get; set; } = [];
+    
+    public Guid? SiguienteSprintId { get; set; }
+
+    private void Submit()
+    {
+        MudDialog.Close(DialogResult.Ok(SiguienteSprintId));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

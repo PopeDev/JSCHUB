@@ -1,0 +1,74 @@
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@using JSCHUB.Domain.Enums
+@using FluentValidation
+
+<MudDialog>
+    <DialogContent>
+        <MudForm Model="@Model" @ref="_form" Validation="@(ValidateValue)">
+            <MudStack Spacing="2">
+                <MudTextField @bind-Value="Model.Nombre" Label="Nombre" HelperText="Ej: Sprint 1" For="@(() => Model.Nombre)" />
+                <MudTextField @bind-Value="Model.Temporizacion" Label="Temporalización" HelperText="Ej: 1er Trimestre" For="@(() => Model.Temporizacion)" />
+                
+                <MudStack Row="true" Spacing="2">
+                    <MudDatePicker Label="Fecha Inicio" @bind-Date="FechaInicio" For="@(() => FechaInicio)" />
+                    <MudDatePicker Label="Fecha Fin" @bind-Date="FechaFin" For="@(() => FechaFin)" />
+                </MudStack>
+                
+                <MudTextField @bind-Value="Model.Objetivo" Label="Objetivo" Variant="Variant.Outlined" Lines="3" For="@(() => Model.Objetivo)" />
+            </MudStack>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Guardar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public UpdateSprintDto Model { get; set; } = new();
+
+    private readonly JSCHUB.Application.Validators.UpdateSprintValidator _validator = new();
+    private MudForm _form = default!;
+
+    private DateTime? FechaInicio
+    {
+        get => Model.FechaInicio.ToDateTime(TimeOnly.MinValue);
+        set 
+        { 
+            if (value.HasValue) 
+                Model.FechaInicio = DateOnly.FromDateTime(value.Value); 
+        }
+    }
+
+    private DateTime? FechaFin
+    {
+        get => Model.FechaFin.ToDateTime(TimeOnly.MinValue);
+        set 
+        { 
+            if (value.HasValue) 
+                Model.FechaFin = DateOnly.FromDateTime(value.Value); 
+        }
+    }
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        if (_form.IsValid)
+        {
+            MudDialog.Close(DialogResult.Ok(Model));
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task<IEnumerable<string>> ValidateValue(object model, string propertyName)
+    {
+        var result = await _validator.ValidateAsync(ValidationContext<UpdateSprintDto>.CreateWithOptions((UpdateSprintDto)model, x => x.IncludeProperties(propertyName)));
+        if (result.IsValid)
+            return Array.Empty<string>();
+        return result.Errors.Select(e => e.ErrorMessage);
+    }
+}

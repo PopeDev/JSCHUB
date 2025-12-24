@@ -1,0 +1,85 @@
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@using JSCHUB.Domain.Enums
+
+<MudDialog>
+    <DialogContent>
+        @if (Sprint != null)
+        {
+            <MudGrid>
+                <MudItem xs="12" sm="4">
+                    <MudPaper Class="pa-4 d-flex flex-column align-center justify-center mud-height-full">
+                        <MudText Typo="Typo.h6">Completitud</MudText>
+                        <MudText Typo="Typo.h3" Color="Color.Primary">
+                            @((Sprint.PorcentajeCompletitud ?? 0).ToString("0"))%
+                        </MudText>
+                        <MudText Typo="Typo.caption">
+                            @(Sprint.TareasEntregadas ?? 0) de @(Sprint.TareasComprometidas ?? 0) tareas comprometidas
+                        </MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="8">
+                    <MudText Typo="Typo.h6" Class="mb-2">Detalles</MudText>
+                    <MudList T="string" Dense="true">
+                        <MudListItem Icon="@Icons.Material.Filled.DateRange">
+                            Inicio: @Sprint.FechaInicio.ToShortDateString() - Fin: @Sprint.FechaFin.ToShortDateString()
+                        </MudListItem>
+                        <MudListItem Icon="@Icons.Material.Filled.EventBusy">
+                            Cerrado el: @Sprint.FechaCierre?.ToShortDateString()
+                        </MudListItem>
+                        @if (!string.IsNullOrEmpty(Sprint.Objetivo))
+                        {
+                            <MudListItem Icon="@Icons.Material.Filled.Flag">
+                                Objetivo: @Sprint.Objetivo
+                            </MudListItem>
+                        }
+                    </MudList>
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudText Typo="Typo.h6" Class="mt-4 mb-2">Tareas Entregadas</MudText>
+                    
+                    @if (Sprint.Historico != null && Sprint.Historico.Any(h => h.FueEntregada))
+                    {
+                        <MudTable Items="@Sprint.Historico.Where(h => h.FueEntregada)" Dense="true" Hover="true" Striped="true">
+                            <HeaderContent>
+                                <MudTh>Tarea</MudTh>
+                                <MudTh>Asignado</MudTh>
+                                <MudTh>Sprints</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Tarea">@context.TareaTitulo</MudTd>
+                                <MudTd DataLabel="Asignado">@context.AsignadoANombre</MudTd>
+                                <MudTd DataLabel="Sprints">
+                                    @if (context.SprintsTranscurridos > 2)
+                                    {
+                                        <MudChip T="string" Color="Color.Error" Size="Size.Small">@context.SprintsTranscurridos</MudChip>
+                                    }
+                                    else
+                                    {
+                                        @context.SprintsTranscurridos
+                                    }
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">No hay tareas entregadas registradas.</MudText>
+                    }
+                </MudItem>
+            </MudGrid>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Color="Color.Primary">Cerrar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    
+    [Parameter] public SprintDto Sprint { get; set; } = default!;
+
+    private void Close() => MudDialog.Close();
+}
