@@ -153,6 +153,11 @@
                                                    Href="@context.Url"
                                                    Target="_blank"
                                                    Title="Abrir enlace" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Key"
+                                                   Size="Size.Small"
+                                                   Color="Color.Secondary"
+                                                   OnClick="@(() => OpenCredencialesDialog(context))"
+                                                   Title="Credenciales" />
                                     <MudIconButton Icon="@Icons.Material.Filled.Edit"
                                                    Size="Size.Small"
                                                    Color="Color.Warning"
@@ -701,6 +706,27 @@
         _notaTitulo = recurso.Nombre;
         _notaContenido = recurso.Contenido ?? string.Empty;
         _showNotaDialog = true;
+    }
+
+    // ========== CREDENCIALES ==========
+
+    private async Task OpenCredencialesDialog(EnlaceProyectoDto enlace)
+    {
+        var parameters = new DialogParameters<CredencialesDialog>
+        {
+            { x => x.EnlaceId, enlace.Id },
+            { x => x.EnlaceTitulo, enlace.Titulo },
+            { x => x.EnlaceUrl, enlace.Url }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseOnEscapeKey = true
+        };
+
+        await DialogService.ShowAsync<CredencialesDialog>("Credenciales", parameters, options);
     }
 
     // ========== HELPERS ==========

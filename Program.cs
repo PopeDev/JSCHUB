@@ -5,15 +5,35 @@ using JSCHUB.Domain.Interfaces;
 using JSCHUB.Infrastructure.BackgroundServices;
 using JSCHUB.Infrastructure.Data;
 using JSCHUB.Infrastructure.Repositories;
+using JSCHUB.Infrastructure.Services;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add MudBlazor
 builder.Services.AddMudServices();
+
+// Configure Data Protection
+var dataProtectionSettings = builder.Configuration.GetSection("DataProtection").Get<DataProtectionSettings>()
+    ?? new DataProtectionSettings();
+builder.Services.Configure<DataProtectionSettings>(builder.Configuration.GetSection("DataProtection"));
+
+var keysPath = Path.IsPathRooted(dataProtectionSettings.KeysPath)
+    ? dataProtectionSettings.KeysPath
+    : Path.Combine(Directory.GetCurrentDirectory(), dataProtectionSettings.KeysPath);
+
+if (!Directory.Exists(keysPath))
+{
+    Directory.CreateDirectory(keysPath);
+}
+
+builder.Services.AddDataProtection()
+    .SetApplicationName(dataProtectionSettings.ApplicationName)
+    .PersistKeysToFileSystem(new DirectoryInfo(keysPath));
 
 // Add DbContext
 builder.Services.AddDbContext<ReminderDbContext>(options =>
@@ -34,6 +54,7 @@ builder.Services.AddScoped<IToolRepository, ToolRepository>();
 builder.Services.AddScoped<ITagRepository, TagRepository>();
 builder.Services.AddScoped<IPromptRepository, PromptRepository>();
 builder.Services.AddScoped<ISprintRepository, SprintRepository>();
+builder.Services.AddScoped<ICredencialProyectoRepository, CredencialProyectoRepository>();
 
 // Add Services
 builder.Services.AddScoped<IReminderService, ReminderService>();
@@ -50,6 +71,7 @@ builder.Services.AddScoped<IToolService, ToolService>();
 builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<IPromptService, PromptService>();
 builder.Services.AddScoped<ISprintService, SprintService>();
+builder.Services.AddScoped<ICredencialProyectoService, CredencialProyectoService>();
 
 // Add Authentication Services (Scoped para aislamiento de sesión por circuito)
 builder.Services.AddScoped<JSCHUB.Infrastructure.Services.AuthService>();
@@ -65,6 +87,7 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 // Add Background Services
 builder.Services.AddHostedService<AlertGeneratorService>();
+builder.Services.AddHostedService<DataProtectionKeyWatcherService>();
 
 // Add Razor Components
 builder.Services.AddRazorComponents()

@@ -47,4 +47,9 @@ public class EnlaceProyecto
 
     // Navegación
     public Proyecto Proyecto { get; set; } = null!;
+
+    /// <summary>
+    /// Credenciales de acceso asociadas a este enlace
+    /// </summary>
+    public ICollection<CredencialProyecto> Credenciales { get; set; } = new List<CredencialProyecto>();
 }
