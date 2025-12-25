@@ -115,6 +115,69 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                     b.ToTable("audit_logs", (string)null);
                 });
 
+            modelBuilder.Entity("JSCHUB.Domain.Entities.CredencialProyecto", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Activa")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime>("CreadoEl")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreadoPor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("EnlaceProyectoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ModificadoEl")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ModificadoPor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Notas")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("PasswordCifrado")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<DateTime?>("UltimoAcceso")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Usuario")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Activa");
+
+                    b.HasIndex("EnlaceProyectoId");
+
+                    b.HasIndex("EnlaceProyectoId", "Nombre");
+
+                    b.ToTable("credenciales_proyecto", (string)null);
+                });
+
             modelBuilder.Entity("JSCHUB.Domain.Entities.EnlaceProyecto", b =>
                 {
                     b.Property<Guid>("Id")
@@ -959,6 +1022,17 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                     b.Navigation("ReminderItem");
                 });
 
+            modelBuilder.Entity("JSCHUB.Domain.Entities.CredencialProyecto", b =>
+                {
+                    b.HasOne("JSCHUB.Domain.Entities.EnlaceProyecto", "EnlaceProyecto")
+                        .WithMany("Credenciales")
+                        .HasForeignKey("EnlaceProyectoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("EnlaceProyecto");
+                });
+
             modelBuilder.Entity("JSCHUB.Domain.Entities.EnlaceProyecto", b =>
                 {
                     b.HasOne("JSCHUB.Domain.Entities.Proyecto", "Proyecto")
@@ -1178,6 +1252,11 @@ namespace JSCHUB.Infrastructure.Data.Migrations
                     b.Navigation("Proyecto");
 
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("JSCHUB.Domain.Entities.EnlaceProyecto", b =>
+                {
+                    b.Navigation("Credenciales");
                 });
 
             modelBuilder.Entity("JSCHUB.Domain.Entities.Gasto", b =>

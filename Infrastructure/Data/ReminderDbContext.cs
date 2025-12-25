@@ -22,6 +22,7 @@ public class ReminderDbContext : DbContext
     public DbSet<Proyecto> Proyectos => Set<Proyecto>();
     public DbSet<EnlaceProyecto> EnlacesProyecto => Set<EnlaceProyecto>();
     public DbSet<RecursoProyecto> RecursosProyecto => Set<RecursoProyecto>();
+    public DbSet<CredencialProyecto> CredencialesProyecto => Set<CredencialProyecto>();
 
     // Módulo Kanban
     public DbSet<KanbanColumn> KanbanColumnas => Set<KanbanColumn>();
