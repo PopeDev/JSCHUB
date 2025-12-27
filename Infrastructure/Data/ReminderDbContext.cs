@@ -43,6 +43,9 @@ public class ReminderDbContext : DbContext
     public DbSet<Sprint> Sprints => Set<Sprint>();
     public DbSet<SprintTareaHistorico> SprintTareasHistorico => Set<SprintTareaHistorico>();
 
+    // Módulo de Calendario
+    public DbSet<Event> Events => Set<Event>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

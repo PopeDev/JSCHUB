@@ -55,6 +55,7 @@ builder.Services.AddScoped<ITagRepository, TagRepository>();
 builder.Services.AddScoped<IPromptRepository, PromptRepository>();
 builder.Services.AddScoped<ISprintRepository, SprintRepository>();
 builder.Services.AddScoped<ICredencialProyectoRepository, CredencialProyectoRepository>();
+builder.Services.AddScoped<IEventRepository, EventRepository>();
 
 // Add Services
 builder.Services.AddScoped<IReminderService, ReminderService>();
@@ -72,6 +73,8 @@ builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<IPromptService, PromptService>();
 builder.Services.AddScoped<ISprintService, SprintService>();
 builder.Services.AddScoped<ICredencialProyectoService, CredencialProyectoService>();
+builder.Services.AddScoped<ICalendarService, CalendarService>();
+builder.Services.AddScoped<INotificationSender, LogNotificationSender>();
 
 // Add Authentication Services (Scoped para aislamiento de sesión por circuito)
 builder.Services.AddScoped<JSCHUB.Infrastructure.Services.AuthService>();
@@ -88,6 +91,7 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 // Add Background Services
 builder.Services.AddHostedService<AlertGeneratorService>();
 builder.Services.AddHostedService<DataProtectionKeyWatcherService>();
+builder.Services.AddHostedService<EventNotificationService>();
 
 // Add Razor Components
 builder.Services.AddRazorComponents()
