@@ -1,0 +1,597 @@
+@page "/calendario"
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@inject ICalendarService CalendarService
+@inject ISnackbar Snackbar
+
+<PageTitle>Calendario</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    @* Header con controles de navegación *@
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudStack Row="true" Spacing="2">
+                <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
+                               OnClick="PreviousMonth"
+                               Variant="Variant.Outlined"
+                               Size="Size.Medium" />
+                <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
+                               OnClick="NextMonth"
+                               Variant="Variant.Outlined"
+                               Size="Size.Medium" />
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           OnClick="GoToToday">
+                    Hoy
+                </MudButton>
+            </MudStack>
+
+            <MudText Typo="Typo.h4">
+                @(_calendarData?.MonthName ?? "") @_currentYear
+            </MudText>
+
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="@(() => OpenCreateDialog(DateTime.Today))">
+                Nuevo Evento
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+
+    @* Calendario *@
+    <MudPaper Class="pa-2" Elevation="2">
+        @if (_loading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-2" />
+        }
+
+        @* Cabecera días de la semana *@
+        <MudGrid Spacing="0" Class="calendar-header">
+            @foreach (var dayName in _dayNames)
+            {
+                <MudItem xs="0" Style="width: calc(100% / 7);">
+                    <MudPaper Class="pa-2 text-center" Elevation="0" Square="true"
+                              Style="background-color: var(--mud-palette-primary); color: white;">
+                        <MudText Typo="Typo.subtitle2">@dayName</MudText>
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+
+        @* Grid de días (6 semanas x 7 días = 42 celdas) *@
+        @if (_calendarData is not null)
+        {
+            <div class="calendar-grid">
+                @foreach (var day in _calendarData.Days)
+                {
+                    <div class="calendar-day @(day.IsCurrentMonth ? "" : "other-month") @(day.IsToday ? "today" : "")"
+                         @onclick="@(() => OpenCreateDialog(day.Date))">
+                        <div class="day-header">
+                            <MudText Typo="Typo.body2"
+                                     Class="@(day.IsToday ? "today-number" : "")">
+                                @day.Date.Day
+                            </MudText>
+                        </div>
+                        <div class="day-events">
+                            @{
+                                var visibleEvents = day.Events.Take(MaxVisibleEvents).ToList();
+                                var remainingCount = day.Events.Count - MaxVisibleEvents;
+                            }
+                            @foreach (var evt in visibleEvents)
+                            {
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Color="@(evt.HasMeetingUrl ? Color.Secondary : Color.Primary)"
+                                         Class="event-chip"
+                                         OnClick="@(() => OpenEventDialog(evt))"
+                                         @onclick:stopPropagation="true">
+                                    <MudText Typo="Typo.caption" Class="event-chip-text">
+                                        @evt.StartTimeFormatted @TruncateTitle(evt.Title)
+                                    </MudText>
+                                </MudChip>
+                            }
+                            @if (remainingCount > 0)
+                            {
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Color="Color.Default"
+                                         Variant="Variant.Outlined"
+                                         Class="event-chip more-events"
+                                         @onclick:stopPropagation="true">
+                                    +@remainingCount
+                                </MudChip>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </MudPaper>
+</MudContainer>
+
+@* Dialog para crear evento *@
+<MudDialog @bind-Visible="_createDialogVisible" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Event" Class="mr-2" />
+            Nuevo Evento
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudTextField @bind-Value="_createModel.Title"
+                          Label="Título"
+                          Required="true"
+                          MaxLength="200"
+                          Variant="Variant.Outlined" />
+
+            <MudDatePicker @bind-Date="_createModel.StartDate"
+                           Label="Fecha"
+                           Required="true"
+                           Variant="Variant.Outlined" />
+
+            <MudStack Row="true" Spacing="2">
+                <MudTimePicker @bind-Time="_createModel.StartTime"
+                               Label="Hora inicio"
+                               Required="true"
+                               Variant="Variant.Outlined" />
+                <MudTimePicker @bind-Time="_createModel.EndTime"
+                               Label="Hora fin"
+                               Required="true"
+                               Variant="Variant.Outlined" />
+            </MudStack>
+
+            <MudTextField @bind-Value="_createModel.MeetingUrl"
+                          Label="URL de reunión (opcional)"
+                          Placeholder="https://meet.google.com/..."
+                          MaxLength="500"
+                          Variant="Variant.Outlined" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _createDialogVisible = false)">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   OnClick="CreateEventAsync"
+                   Disabled="_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Crear
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@* Dialog para ver/editar evento *@
+<MudDialog @bind-Visible="_eventDialogVisible" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Event" Class="mr-2" />
+            @(_isEditing ? "Editar Evento" : "Detalle del Evento")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_selectedEvent is not null)
+        {
+            <MudStack Spacing="3">
+                @if (_isEditing)
+                {
+                    <MudTextField @bind-Value="_editModel.Title"
+                                  Label="Título"
+                                  Required="true"
+                                  MaxLength="200"
+                                  Variant="Variant.Outlined" />
+
+                    <MudDatePicker @bind-Date="_editModel.StartDate"
+                                   Label="Fecha"
+                                   Required="true"
+                                   Variant="Variant.Outlined" />
+
+                    <MudStack Row="true" Spacing="2">
+                        <MudTimePicker @bind-Time="_editModel.StartTime"
+                                       Label="Hora inicio"
+                                       Required="true"
+                                       Variant="Variant.Outlined" />
+                        <MudTimePicker @bind-Time="_editModel.EndTime"
+                                       Label="Hora fin"
+                                       Required="true"
+                                       Variant="Variant.Outlined" />
+                    </MudStack>
+
+                    <MudTextField @bind-Value="_editModel.MeetingUrl"
+                                  Label="URL de reunión (opcional)"
+                                  Placeholder="https://meet.google.com/..."
+                                  MaxLength="500"
+                                  Variant="Variant.Outlined" />
+                }
+                else
+                {
+                    <MudText Typo="Typo.h5">@_selectedEvent.Title</MudText>
+
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
+                        <MudText>
+                            @_selectedEvent.StartUtc.ToLocalTime().ToString("dddd, d 'de' MMMM 'de' yyyy")
+                        </MudText>
+                    </MudStack>
+
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.AccessTime" Size="Size.Small" />
+                        <MudText>
+                            @_selectedEvent.StartUtc.ToLocalTime().ToString("HH:mm") -
+                            @_selectedEvent.EndUtc.ToLocalTime().ToString("HH:mm")
+                        </MudText>
+                    </MudStack>
+
+                    @if (!string.IsNullOrEmpty(_selectedEvent.MeetingUrl))
+                    {
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Secondary"
+                                   StartIcon="@Icons.Material.Filled.VideoCall"
+                                   Href="@_selectedEvent.MeetingUrl"
+                                   Target="_blank"
+                                   FullWidth="true">
+                            Unirse a la reunión
+                        </MudButton>
+                    }
+                }
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        @if (_isEditing)
+        {
+            <MudButton OnClick="CancelEdit">Cancelar</MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       OnClick="UpdateEventAsync"
+                       Disabled="_saving">
+                @if (_saving)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                }
+                Guardar
+            </MudButton>
+        }
+        else
+        {
+            <MudButton Color="Color.Error"
+                       OnClick="DeleteEventAsync"
+                       Disabled="_saving">
+                Eliminar
+            </MudButton>
+            <MudButton OnClick="@(() => _isEditing = true)">Editar</MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       OnClick="@(() => _eventDialogVisible = false)">
+                Cerrar
+            </MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        border: 1px solid var(--mud-palette-lines-default);
+    }
+
+    .calendar-day {
+        min-height: 120px;
+        border: 1px solid var(--mud-palette-lines-default);
+        padding: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        background-color: var(--mud-palette-surface);
+    }
+
+    .calendar-day:hover {
+        background-color: var(--mud-palette-action-default-hover);
+    }
+
+    .calendar-day.other-month {
+        background-color: var(--mud-palette-background-grey);
+        opacity: 0.6;
+    }
+
+    .calendar-day.today {
+        background-color: rgba(var(--mud-palette-primary-rgb), 0.1);
+    }
+
+    .day-header {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 4px;
+    }
+
+    .today-number {
+        background-color: var(--mud-palette-primary);
+        color: white;
+        border-radius: 50%;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .day-events {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .event-chip {
+        width: 100%;
+        max-width: 100%;
+        justify-content: flex-start;
+        cursor: pointer;
+    }
+
+    .event-chip-text {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .more-events {
+        font-size: 0.75rem;
+    }
+</style>
+
+@code {
+    private const int MaxVisibleEvents = 4;
+
+    private static readonly string[] _dayNames = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+
+    private readonly DialogOptions _dialogOptions = new()
+    {
+        CloseOnEscapeKey = true,
+        BackdropClick = false,
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true
+    };
+
+    private CalendarMonthDto? _calendarData;
+    private int _currentYear = DateTime.Today.Year;
+    private int _currentMonth = DateTime.Today.Month;
+    private bool _loading;
+    private bool _saving;
+
+    // Crear evento
+    private bool _createDialogVisible;
+    private EventFormModel _createModel = new();
+
+    // Ver/editar evento
+    private bool _eventDialogVisible;
+    private CalendarItemDto? _selectedEvent;
+    private EventFormModel _editModel = new();
+    private bool _isEditing;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCalendarAsync();
+    }
+
+    private async Task LoadCalendarAsync()
+    {
+        _loading = true;
+        try
+        {
+            _calendarData = await CalendarService.GetMonthAsync(_currentYear, _currentMonth);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al cargar el calendario: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task PreviousMonth()
+    {
+        _currentMonth--;
+        if (_currentMonth < 1)
+        {
+            _currentMonth = 12;
+            _currentYear--;
+        }
+        await LoadCalendarAsync();
+    }
+
+    private async Task NextMonth()
+    {
+        _currentMonth++;
+        if (_currentMonth > 12)
+        {
+            _currentMonth = 1;
+            _currentYear++;
+        }
+        await LoadCalendarAsync();
+    }
+
+    private async Task GoToToday()
+    {
+        _currentYear = DateTime.Today.Year;
+        _currentMonth = DateTime.Today.Month;
+        await LoadCalendarAsync();
+    }
+
+    private void OpenCreateDialog(DateTime date)
+    {
+        _createModel = new EventFormModel
+        {
+            StartDate = date,
+            StartTime = new TimeSpan(9, 0, 0),
+            EndTime = new TimeSpan(10, 0, 0)
+        };
+        _createDialogVisible = true;
+    }
+
+    private void OpenEventDialog(CalendarItemDto evt)
+    {
+        _selectedEvent = evt;
+        _isEditing = false;
+
+        var localStart = evt.StartUtc.ToLocalTime();
+        var localEnd = evt.EndUtc.ToLocalTime();
+
+        _editModel = new EventFormModel
+        {
+            Title = evt.Title,
+            StartDate = localStart.Date,
+            StartTime = localStart.TimeOfDay,
+            EndTime = localEnd.TimeOfDay,
+            MeetingUrl = evt.MeetingUrl
+        };
+
+        _eventDialogVisible = true;
+    }
+
+    private void CancelEdit()
+    {
+        _isEditing = false;
+        if (_selectedEvent is not null)
+        {
+            var localStart = _selectedEvent.StartUtc.ToLocalTime();
+            var localEnd = _selectedEvent.EndUtc.ToLocalTime();
+
+            _editModel = new EventFormModel
+            {
+                Title = _selectedEvent.Title,
+                StartDate = localStart.Date,
+                StartTime = localStart.TimeOfDay,
+                EndTime = localEnd.TimeOfDay,
+                MeetingUrl = _selectedEvent.MeetingUrl
+            };
+        }
+    }
+
+    private async Task CreateEventAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_createModel.Title))
+        {
+            Snackbar.Add("El título es obligatorio", Severity.Warning);
+            return;
+        }
+
+        if (!_createModel.StartDate.HasValue || !_createModel.StartTime.HasValue || !_createModel.EndTime.HasValue)
+        {
+            Snackbar.Add("La fecha y horas son obligatorias", Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            var startLocal = _createModel.StartDate.Value.Add(_createModel.StartTime.Value);
+            var endLocal = _createModel.StartDate.Value.Add(_createModel.EndTime.Value);
+
+            var dto = new CreateEventDto(
+                _createModel.Title,
+                DateTime.SpecifyKind(startLocal, DateTimeKind.Local).ToUniversalTime(),
+                DateTime.SpecifyKind(endLocal, DateTimeKind.Local).ToUniversalTime(),
+                _createModel.MeetingUrl
+            );
+
+            await CalendarService.CreateAsync(dto, "sistema");
+            Snackbar.Add("Evento creado correctamente", Severity.Success);
+            _createDialogVisible = false;
+            await LoadCalendarAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al crear evento: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task UpdateEventAsync()
+    {
+        if (_selectedEvent is null) return;
+
+        if (string.IsNullOrWhiteSpace(_editModel.Title))
+        {
+            Snackbar.Add("El título es obligatorio", Severity.Warning);
+            return;
+        }
+
+        if (!_editModel.StartDate.HasValue || !_editModel.StartTime.HasValue || !_editModel.EndTime.HasValue)
+        {
+            Snackbar.Add("La fecha y horas son obligatorias", Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            var startLocal = _editModel.StartDate.Value.Add(_editModel.StartTime.Value);
+            var endLocal = _editModel.StartDate.Value.Add(_editModel.EndTime.Value);
+
+            var dto = new UpdateEventDto(
+                _editModel.Title,
+                DateTime.SpecifyKind(startLocal, DateTimeKind.Local).ToUniversalTime(),
+                DateTime.SpecifyKind(endLocal, DateTimeKind.Local).ToUniversalTime(),
+                _editModel.MeetingUrl
+            );
+
+            await CalendarService.UpdateAsync(_selectedEvent.Id, dto, "sistema");
+            Snackbar.Add("Evento actualizado correctamente", Severity.Success);
+            _eventDialogVisible = false;
+            await LoadCalendarAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al actualizar evento: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task DeleteEventAsync()
+    {
+        if (_selectedEvent is null) return;
+
+        _saving = true;
+        try
+        {
+            await CalendarService.DeleteAsync(_selectedEvent.Id);
+            Snackbar.Add("Evento eliminado correctamente", Severity.Success);
+            _eventDialogVisible = false;
+            await LoadCalendarAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al eliminar evento: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private static string TruncateTitle(string title)
+    {
+        const int maxLength = 15;
+        return title.Length <= maxLength ? title : title[..(maxLength - 1)] + "...";
+    }
+
+    private class EventFormModel
+    {
+        public string Title { get; set; } = string.Empty;
+        public DateTime? StartDate { get; set; }
+        public TimeSpan? StartTime { get; set; }
+        public TimeSpan? EndTime { get; set; }
+        public string? MeetingUrl { get; set; }
+    }
+}
