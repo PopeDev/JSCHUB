@@ -1,0 +1,187 @@
+@page "/backoffice/credenciales"
+@using JSCHUB.Application.DTOs
+@using JSCHUB.Application.Interfaces
+@rendermode InteractiveServer
+
+<PageTitle>Credenciales - JSCHUB</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+        <MudText Typo="Typo.h4">Gestión de Contraseñas</MudText>
+    </MudStack>
+
+    @* Filtros *@
+    <MudPaper Class="pa-4 mb-4" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="4">
+                <MudTextField T="string"
+                               @bind-Value="_searchText"
+                               Label="Buscar"
+                               Placeholder="Nombre, usuario, proyecto..."
+                               Adornment="Adornment.Start"
+                               AdornmentIcon="@Icons.Material.Filled.Search"
+                               Immediate="true"
+                               DebounceInterval="300"
+                               OnDebounceIntervalElapsed="LoadDataAsync" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudSwitch T="bool"
+                           Value="_mostrarInactivas"
+                           Label="Mostrar inactivas"
+                           Color="Color.Primary"
+                           ValueChanged="@(async (bool v) => { _mostrarInactivas = v; await LoadDataAsync(); })" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="2" Class="d-flex align-end">
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Secondary"
+                           OnClick="LimpiarFiltros"
+                           FullWidth="true">
+                    Limpiar
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+
+    <MudTable Items="@_credenciales"
+              Hover="true"
+              Striped="true"
+              Elevation="1"
+              Loading="@_loading"
+              Dense="true">
+        <HeaderContent>
+            <MudTh>Nombre</MudTh>
+            <MudTh>Usuario</MudTh>
+            <MudTh>Proyecto / Enlace</MudTh>
+            <MudTh>Estado</MudTh>
+            <MudTh>Modificado</MudTh>
+            <MudTh Style="width: 150px;">Acciones</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Nombre">
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                    <MudIcon Icon="@Icons.Material.Filled.VpnKey" Size="Size.Small" Color="Color.Primary" />
+                    <MudText>@context.Nombre</MudText>
+                </MudStack>
+            </MudTd>
+            <MudTd DataLabel="Usuario">@context.Usuario</MudTd>
+            <MudTd DataLabel="Proyecto / Enlace">
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.body2">@context.EnlaceTitulo</MudText>
+                    <MudLink Href="@context.EnlaceUrl" Target="_blank" Typo="Typo.caption" Color="Color.Secondary">
+                        @context.EnlaceUrl
+                    </MudLink>
+                </MudStack>
+            </MudTd>
+            <MudTd DataLabel="Estado">
+                <MudChip T="string" Size="Size.Small" Color="@(context.Activa ? Color.Success : Color.Default)" Variant="Variant.Text">
+                    @(context.Activa ? "Activa" : "Inactiva")
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Modificado">@context.ModificadoEl.ToString("dd/MM/yyyy HH:mm")</MudTd>
+            <MudTd DataLabel="Acciones">
+                <MudStack Row="true" Spacing="1">
+                    <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                   Size="Size.Small"
+                                   Color="Color.Primary"
+                                   OnClick="@(() => CopyPasswordAsync(context.Id))"
+                                   title="Copiar contraseña" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                   Size="Size.Small"
+                                   Color="Color.Info"
+                                   OnClick="@(() => ShowCredencialAsync(context))"
+                                   title="Ver detalles" />
+                </MudStack>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Typo="Typo.body1" Align="Align.Center" Class="pa-4">
+                No se encontraron credenciales con los filtros actuales.
+            </MudText>
+        </NoRecordsContent>
+    </MudTable>
+</MudContainer>
+
+@code {
+    [Inject] private ICredencialProyectoService CredencialService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+
+    private bool _loading = true;
+    private List<CredencialProyectoDto> _credenciales = [];
+    
+    private string? _searchText;
+    private bool _mostrarInactivas;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try
+        {
+            var result = await CredencialService.SearchAsync(
+                searchText: _searchText,
+                activa: _mostrarInactivas ? null : true);
+            _credenciales = result.ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al cargar credenciales: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task LimpiarFiltros()
+    {
+        _searchText = null;
+        _mostrarInactivas = false;
+        await LoadDataAsync();
+    }
+
+    private async Task CopyPasswordAsync(Guid id)
+    {
+        try
+        {
+            var password = await CredencialService.GetPasswordAsync(id, "usuario");
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", password);
+            Snackbar.Add("Contraseña copiada al portapapeles", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al copiar: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ShowCredencialAsync(CredencialProyectoDto credencial)
+    {
+        var parameters = new DialogParameters<CredencialesDialog>
+        {
+            { x => x.EnlaceId, credencial.EnlaceProyectoId },
+            { x => x.EnlaceTitulo, credencial.EnlaceTitulo ?? "Detalles" },
+            { x => x.EnlaceUrl, credencial.EnlaceUrl ?? "" }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseOnEscapeKey = true
+        };
+
+        var dialog = await DialogService.ShowAsync<CredencialesDialog>("Credenciales", parameters, options);
+        await dialog.Result;
+        await LoadDataAsync();
+    }
+}

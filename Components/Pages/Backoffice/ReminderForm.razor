@@ -142,7 +142,7 @@
                         </MudChipSet>
                         <div class="d-flex gap-2 mt-2">
                             <MudTextField @bind-Value="_newTag" Label="Nueva etiqueta"
-                                          Variant="Variant.Outlined" Dense="true" />
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" />
                             <MudButton Variant="Variant.Outlined" OnClick="AddTag">Añadir</MudButton>
                         </div>
                     </MudItem>
@@ -158,12 +158,12 @@
                             <MudGrid Class="mb-2">
                                 <MudItem xs="5">
                                     <MudTextField Value="@kvp.Key" Label="Clave" Disabled="true"
-                                                  Variant="Variant.Outlined" Dense="true" />
+                                                  Variant="Variant.Outlined" Margin="Margin.Dense" />
                                 </MudItem>
                                 <MudItem xs="5">
                                     <MudTextField Value="@kvp.Value" Label="Valor"
                                                   ValueChanged="@((string v) => UpdateMetadata(kvp.Key, v))"
-                                                  Variant="Variant.Outlined" Dense="true" />
+                                                  Variant="Variant.Outlined" Margin="Margin.Dense" />
                                 </MudItem>
                                 <MudItem xs="2" Class="d-flex align-center">
                                     <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
@@ -173,9 +173,9 @@
                         }
                         <div class="d-flex gap-2 mt-2">
                             <MudTextField @bind-Value="_newMetaKey" Label="Clave"
-                                          Variant="Variant.Outlined" Dense="true" />
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" />
                             <MudTextField @bind-Value="_newMetaValue" Label="Valor"
-                                          Variant="Variant.Outlined" Dense="true" />
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" />
                             <MudButton Variant="Variant.Outlined" OnClick="AddMetadata">Añadir</MudButton>
                         </div>
                     </MudItem>

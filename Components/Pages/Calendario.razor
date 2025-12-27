@@ -80,27 +80,29 @@
                             }
                             @foreach (var evt in visibleEvents)
                             {
-                                <MudChip T="string"
-                                         Size="Size.Small"
-                                         Color="@(evt.HasMeetingUrl ? Color.Secondary : Color.Primary)"
-                                         Class="event-chip"
-                                         OnClick="@(() => OpenEventDialog(evt))"
-                                         @onclick:stopPropagation="true">
-                                    <MudText Typo="Typo.caption" Class="event-chip-text">
-                                        @evt.StartTimeFormatted @TruncateTitle(evt.Title)
-                                    </MudText>
-                                </MudChip>
+                                <span @onclick:stopPropagation="true">
+                                    <MudChip T="string"
+                                             Size="Size.Small"
+                                             Color="@(evt.HasMeetingUrl ? Color.Secondary : Color.Primary)"
+                                             Class="event-chip"
+                                             OnClick="@(() => OpenEventDialog(evt))">
+                                        <MudText Typo="Typo.caption" Class="event-chip-text">
+                                            @evt.StartTimeFormatted @TruncateTitle(evt.Title)
+                                        </MudText>
+                                    </MudChip>
+                                </span>
                             }
                             @if (remainingCount > 0)
                             {
-                                <MudChip T="string"
-                                         Size="Size.Small"
-                                         Color="Color.Default"
-                                         Variant="Variant.Outlined"
-                                         Class="event-chip more-events"
-                                         @onclick:stopPropagation="true">
-                                    +@remainingCount
-                                </MudChip>
+                                <span @onclick:stopPropagation="true">
+                                    <MudChip T="string"
+                                             Size="Size.Small"
+                                             Color="Color.Default"
+                                             Variant="Variant.Outlined"
+                                             Class="event-chip more-events">
+                                        +@remainingCount
+                                    </MudChip>
+                                </span>
                             }
                         </div>
                     </div>

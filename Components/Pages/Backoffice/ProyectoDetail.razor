@@ -109,7 +109,6 @@
             </MudStack>
         </MudPaper>
 
-        @* Pestañas de Enlaces y Recursos *@
         <MudTabs Elevation="1" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
             <MudTabPanel Text="Enlaces" Icon="@Icons.Material.Filled.Link" BadgeData="@_proyecto.Enlaces.Count()" BadgeColor="Color.Primary">
                 @* Sección de Enlaces *@
@@ -152,22 +151,22 @@
                                                    Color="Color.Primary"
                                                    Href="@context.Url"
                                                    Target="_blank"
-                                                   Title="Abrir enlace" />
+                                                   title="Abrir enlace" />
                                     <MudIconButton Icon="@Icons.Material.Filled.Key"
                                                    Size="Size.Small"
                                                    Color="Color.Secondary"
                                                    OnClick="@(() => OpenCredencialesDialog(context))"
-                                                   Title="Credenciales" />
+                                                   title="Credenciales" />
                                     <MudIconButton Icon="@Icons.Material.Filled.Edit"
                                                    Size="Size.Small"
                                                    Color="Color.Warning"
                                                    OnClick="@(() => OpenEnlaceDialog(context))"
-                                                   Title="Editar" />
+                                                   title="Editar" />
                                     <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                                    Size="Size.Small"
                                                    Color="Color.Error"
                                                    OnClick="@(() => DeleteEnlaceAsync(context.Id))"
-                                                   Title="Eliminar" />
+                                                   title="Eliminar" />
                                 </MudStack>
                             </MudTd>
                         </RowTemplate>
@@ -236,7 +235,7 @@
                                                        Color="Color.Primary"
                                                        Href="@context.Url"
                                                        Target="_blank"
-                                                       Title="Abrir enlace" />
+                                                       title="Abrir enlace" />
                                     }
                                     else if (context.Tipo == TipoRecurso.Nota)
                                     {
@@ -244,18 +243,18 @@
                                                        Size="Size.Small"
                                                        Color="Color.Info"
                                                        OnClick="@(() => VerNotaAsync(context))"
-                                                       Title="Ver nota" />
+                                                       title="Ver nota" />
                                     }
                                     <MudIconButton Icon="@Icons.Material.Filled.Edit"
                                                    Size="Size.Small"
                                                    Color="Color.Warning"
                                                    OnClick="@(() => OpenRecursoDialog(context))"
-                                                   Title="Editar" />
+                                                   title="Editar" />
                                     <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                                    Size="Size.Small"
                                                    Color="Color.Error"
                                                    OnClick="@(() => DeleteRecursoAsync(context.Id))"
-                                                   Title="Eliminar" />
+                                                   title="Eliminar" />
                                 </MudStack>
                             </MudTd>
                         </RowTemplate>
@@ -266,6 +265,79 @@
                     <MudAlert Severity="Severity.Info">
                         No hay recursos registrados para este proyecto.
                     </MudAlert>
+                }
+            </MudTabPanel>
+
+            <MudTabPanel Text="Contraseñas" Icon="@Icons.Material.Filled.VpnKey" BadgeData="@_credenciales.Count" BadgeColor="Color.Secondary">
+                @* Sección de Contraseñas *@
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+                    <MudText Typo="Typo.h6">Credenciales y accesos</MudText>
+                    @if (_proyecto.Enlaces.Any())
+                    {
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Add"
+                                   OnClick="OpenNewCredencialDialog"
+                                   Disabled="@(_proyecto.Estado == EstadoProyecto.Archivado)">
+                            Nueva credencial
+                        </MudButton>
+                    }
+                </MudStack>
+
+                @if (_credenciales.Any())
+                {
+                    <MudTable Items="@_credenciales" Hover="true" Striped="true" Elevation="0" Dense="true">
+                        <HeaderContent>
+                            <MudTh>Nombre</MudTh>
+                            <MudTh>Usuario</MudTh>
+                            <MudTh>Enlace</MudTh>
+                            <MudTh>Acciones</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Nombre">@context.Nombre</MudTd>
+                            <MudTd DataLabel="Usuario">@context.Usuario</MudTd>
+                            <MudTd DataLabel="Enlace">
+                                <MudLink Href="@context.EnlaceUrl" Target="_blank" Typo="Typo.body2">
+                                    @context.EnlaceTitulo
+                                </MudLink>
+                            </MudTd>
+                            <MudTd DataLabel="Acciones">
+                                <MudStack Row="true" Spacing="1">
+                                    <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                                   Size="Size.Small"
+                                                   Color="Color.Primary"
+                                                   OnClick="@(() => CopyPasswordAsync(context.Id))"
+                                                   title="Copiar contraseña" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                                   Size="Size.Small"
+                                                   Color="Color.Info"
+                                                   OnClick="@(() => ShowCredencialAsync(context.Id))"
+                                                   title="Ver detalles" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                   Size="Size.Small"
+                                                   Color="Color.Error"
+                                                   OnClick="@(() => DeleteCredencialAsync(context.Id))"
+                                                   title="Eliminar" />
+                                </MudStack>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+                else
+                {
+                    @if (!_proyecto.Enlaces.Any())
+                    {
+                        <MudAlert Severity="Severity.Warning">
+                            Debe añadir al menos un enlace para poder gestionar credenciales.
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Info">
+                            No hay credenciales registradas para este proyecto.
+                        </MudAlert>
+                    }
                 }
             </MudTabPanel>
         </MudTabs>
@@ -392,13 +464,16 @@
     [Inject] private IProyectoService ProyectoService { get; set; } = default!;
     [Inject] private IEnlaceProyectoService EnlaceService { get; set; } = default!;
     [Inject] private IRecursoProyectoService RecursoService { get; set; } = default!;
+    [Inject] private ICredencialProyectoService CredencialService { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private IDialogService DialogService { get; set; } = default!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
     private bool _loading = true;
     private bool _notFound;
     private ProyectoDetalleDto? _proyecto;
+    private List<CredencialProyectoDto> _credenciales = new();
 
     // Dialog Enlace
     private bool _showEnlaceDialog;
@@ -443,6 +518,10 @@
             if (_proyecto == null)
             {
                 _notFound = true;
+            }
+            else
+            {
+                await LoadCredencialesAsync();
             }
         }
         catch (Exception ex)
@@ -716,7 +795,8 @@
         {
             { x => x.EnlaceId, enlace.Id },
             { x => x.EnlaceTitulo, enlace.Titulo },
-            { x => x.EnlaceUrl, enlace.Url }
+            { x => x.EnlaceUrl, enlace.Url },
+            { x => x.EnlacesDisponibles, _proyecto?.Enlaces.ToList() }
         };
 
         var options = new DialogOptions
@@ -726,7 +806,120 @@
             CloseOnEscapeKey = true
         };
 
-        await DialogService.ShowAsync<CredencialesDialog>("Credenciales", parameters, options);
+        var dialog = await DialogService.ShowAsync<CredencialesDialog>("Credenciales", parameters, options);
+        var result = await dialog.Result;
+        
+        await LoadCredencialesAsync();
+        StateHasChanged();
+    }
+
+    private async Task OpenNewCredencialDialog()
+    {
+        if (_proyecto == null || !_proyecto.Enlaces.Any()) return;
+        
+        var firstEnlace = _proyecto.Enlaces.First();
+        var parameters = new DialogParameters<CredencialesDialog>
+        {
+            { x => x.EnlaceId, firstEnlace.Id },
+            { x => x.EnlaceTitulo, "Nueva credencial" },
+            { x => x.EnlaceUrl, firstEnlace.Url },
+            { x => x.EnlacesDisponibles, _proyecto.Enlaces.ToList() },
+            { x => x.StartInFormMode, true }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseOnEscapeKey = true
+        };
+
+        var dialog = await DialogService.ShowAsync<CredencialesDialog>("Nueva credencial", parameters, options);
+        await dialog.Result;
+        
+        await LoadCredencialesAsync();
+        StateHasChanged();
+    }
+
+    private async Task LoadCredencialesAsync()
+    {
+        try
+        {
+            var result = await CredencialService.GetByProyectoIdAsync(Id);
+            _credenciales = result.ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al cargar credenciales: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task CopyPasswordAsync(Guid id)
+    {
+        try
+        {
+            var password = await CredencialService.GetPasswordAsync(id, "usuario");
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", password);
+            Snackbar.Add("Contraseña copiada al portapapeles", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al copiar: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ShowCredencialAsync(Guid id)
+    {
+        var credencial = _credenciales.FirstOrDefault(c => c.Id == id);
+        if (credencial == null) return;
+        
+        var enlace = _proyecto?.Enlaces.FirstOrDefault(e => e.Id == credencial.EnlaceProyectoId);
+        if (enlace != null)
+        {
+            var parameters = new DialogParameters<CredencialesDialog>
+            {
+                { x => x.EnlaceId, enlace.Id },
+                { x => x.EnlaceTitulo, enlace.Titulo },
+                { x => x.EnlaceUrl, enlace.Url },
+                { x => x.EnlacesDisponibles, _proyecto?.Enlaces.ToList() },
+                { x => x.InitialCredencialId, id }
+            };
+
+            var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true,
+                CloseOnEscapeKey = true
+            };
+
+            var dialog = await DialogService.ShowAsync<CredencialesDialog>("Detalles de credencial", parameters, options);
+            await dialog.Result;
+            await LoadCredencialesAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteCredencialAsync(Guid id)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Confirmar eliminación",
+            "¿Está seguro de que desea eliminar esta credencial?",
+            yesText: "Eliminar",
+            cancelText: "Cancelar");
+
+        if (result == true)
+        {
+            try
+            {
+                await CredencialService.DeleteAsync(id);
+                Snackbar.Add("Credencial eliminada", Severity.Warning);
+                await LoadCredencialesAsync();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error al eliminar: {ex.Message}", Severity.Error);
+            }
+        }
     }
 
     // ========== HELPERS ==========

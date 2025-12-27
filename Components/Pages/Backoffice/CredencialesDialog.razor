@@ -1,15 +1,30 @@
 @using JSCHUB.Application.DTOs
 @using JSCHUB.Application.Interfaces
 
-<MudDialog>
+<MudDialog ActionsClass="px-6 pb-6">
     <TitleContent>
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-            <MudIcon Icon="@Icons.Material.Filled.Key" />
-            <MudText Typo="Typo.h6">Credenciales - @EnlaceTitulo</MudText>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.Key" Color="Color.Primary" />
+                <MudText Typo="Typo.h6">
+                    @(_mode == ViewMode.List ? $"Credenciales - {EnlaceTitulo}" : 
+                      _mode == ViewMode.Form ? (_editingCredencial == null ? "Nueva credencial" : "Editar credencial") :
+                      "Detalles de credencial")
+                </MudText>
+            </MudStack>
+            @if (_mode != ViewMode.List)
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" 
+                               Color="Color.Inherit" 
+                               OnClick="GoBack" />
+            }
         </MudStack>
     </TitleContent>
     <DialogContent>
-        <MudText Typo="Typo.caption" Class="mb-4">@EnlaceUrl</MudText>
+        @if (_mode != ViewMode.Form || EnlacesDisponibles == null || !EnlacesDisponibles.Any())
+        {
+            <MudText Typo="Typo.caption" Class="mb-4 d-block">@_currentEnlaceUrl</MudText>
+        }
 
         @if (_loading)
         {
@@ -17,221 +32,236 @@
         }
         else
         {
-            @* Lista de credenciales existentes *@
-            @if (_credenciales.Any())
+            @if (_mode == ViewMode.List)
             {
-                <MudTable Items="_credenciales" Hover="true" Dense="true" Striped="true" Elevation="0">
-                    <HeaderContent>
-                        <MudTh>Nombre</MudTh>
-                        <MudTh>Usuario</MudTh>
-                        <MudTh>Estado</MudTh>
-                        <MudTh>Acciones</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd DataLabel="Nombre">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                <MudIcon Icon="@Icons.Material.Filled.VpnKey" Size="Size.Small" Color="Color.Primary" />
-                                <MudText>@context.Nombre</MudText>
-                            </MudStack>
-                        </MudTd>
-                        <MudTd DataLabel="Usuario">
-                            <MudText>@context.Usuario</MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Estado">
-                            @if (context.Activa)
-                            {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">Activa</MudChip>
-                            }
-                            else
-                            {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text">Inactiva</MudChip>
-                            }
-                        </MudTd>
-                        <MudTd DataLabel="Acciones">
-                            <MudStack Row="true" Spacing="0">
-                                <MudTooltip Text="Copiar contraseña">
-                                    <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
-                                                   Size="Size.Small"
-                                                   Color="Color.Primary"
-                                                   OnClick="@(() => CopyPasswordAsync(context.Id))" />
-                                </MudTooltip>
-                                <MudTooltip Text="Ver detalles">
-                                    <MudIconButton Icon="@Icons.Material.Filled.Visibility"
-                                                   Size="Size.Small"
-                                                   Color="Color.Info"
-                                                   OnClick="@(() => ShowPasswordAsync(context.Id))" />
-                                </MudTooltip>
-                                <MudTooltip Text="Editar">
-                                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                                   Size="Size.Small"
-                                                   Color="Color.Warning"
-                                                   OnClick="@(() => OpenFormDialog(context))" />
-                                </MudTooltip>
-                                <MudTooltip Text="Eliminar">
-                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                   Size="Size.Small"
-                                                   Color="Color.Error"
-                                                   OnClick="@(() => DeleteCredencialAsync(context.Id))" />
-                                </MudTooltip>
-                            </MudStack>
-                        </MudTd>
-                    </RowTemplate>
-                </MudTable>
+                @* MODO LISTA *@
+                @if (_credenciales.Any())
+                {
+                    <MudTable Items="_credenciales" Hover="true" Dense="true" Striped="true" Elevation="0" Class="mt-2">
+                        <HeaderContent>
+                            <MudTh>Nombre</MudTh>
+                            <MudTh>Usuario</MudTh>
+                            <MudTh>Estado</MudTh>
+                            <MudTh>Acciones</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Nombre">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudIcon Icon="@Icons.Material.Filled.VpnKey" Size="Size.Small" Color="Color.Primary" />
+                                    <MudText>@context.Nombre</MudText>
+                                </MudStack>
+                            </MudTd>
+                            <MudTd DataLabel="Usuario">
+                                <MudText>@context.Usuario</MudText>
+                            </MudTd>
+                            <MudTd DataLabel="Estado">
+                                @if (context.Activa)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">Activa</MudChip>
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Text">Inactiva</MudChip>
+                                }
+                            </MudTd>
+                            <MudTd DataLabel="Acciones">
+                                <MudStack Row="true" Spacing="0">
+                                    <MudTooltip Text="Copiar contraseña">
+                                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                                       Size="Size.Small"
+                                                       Color="Color.Primary"
+                                                       OnClick="@(() => CopyPasswordAsync(context.Id))" />
+                                    </MudTooltip>
+                                    <MudTooltip Text="Ver detalles">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                                       Size="Size.Small"
+                                                       Color="Color.Info"
+                                                       OnClick="@(() => ShowDetailsAsync(context.Id))" />
+                                    </MudTooltip>
+                                    <MudTooltip Text="Editar">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                       Size="Size.Small"
+                                                       Color="Color.Warning"
+                                                       OnClick="@(() => OpenForm(context))" />
+                                    </MudTooltip>
+                                    <MudTooltip Text="Eliminar">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                       Size="Size.Small"
+                                                       Color="Color.Error"
+                                                       OnClick="@(() => DeleteCredencialAsync(context.Id))" />
+                                    </MudTooltip>
+                                </MudStack>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info" Class="mb-4">
+                        No hay credenciales registradas para este enlace.
+                    </MudAlert>
+                }
             }
-            else
+            else if (_mode == ViewMode.Form)
             {
-                <MudAlert Severity="Severity.Info" Class="mb-4">
-                    No hay credenciales registradas para este enlace.
-                </MudAlert>
-            }
+                @* MODO FORMULARIO (CREAR/EDITAR) *@
+                <MudForm @ref="_form" @bind-IsValid="_formValid">
+                    <MudGrid>
+                        @if (EnlacesDisponibles != null && EnlacesDisponibles.Any())
+                        {
+                            <MudItem xs="12">
+                                <MudSelect T="Guid" Label="Vincular con enlace" @bind-Value="EnlaceId" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                    @foreach (var enlace in EnlacesDisponibles)
+                                    {
+                                        <MudSelectItem Value="@enlace.Id">@enlace.Titulo (@enlace.Url)</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </MudItem>
+                        }
 
-            @* Formulario para nueva/editar credencial *@
-            @if (_showForm)
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string"
+                                          @bind-Value="_nombre"
+                                          Label="Nombre *"
+                                          Required="true"
+                                          RequiredError="El nombre es obligatorio"
+                                          MaxLength="100"
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string"
+                                          @bind-Value="_usuario"
+                                          Label="Usuario *"
+                                          Required="true"
+                                          RequiredError="El usuario es obligatorio"
+                                          MaxLength="500"
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense" />
+                        </MudItem>
+                        <MudItem xs="12" sm="@( _editingCredencial == null ? 12 : 6)">
+                            <MudTextField T="string"
+                                          @bind-Value="_password"
+                                          Label="@(_editingCredencial == null ? "Contraseña *" : "Nueva contraseña (dejar vacío para no cambiar)")"
+                                          Required="@(_editingCredencial == null)"
+                                          RequiredError="La contraseña es obligatoria"
+                                          MaxLength="1000"
+                                          InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense"
+                                          Adornment="Adornment.End"
+                                          AdornmentIcon="@(_showPassword ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                                          OnAdornmentClick="@(() => _showPassword = !_showPassword)" />
+                        </MudItem>
+                        @if (_editingCredencial != null)
+                        {
+                            <MudItem xs="12" sm="6" Class="d-flex align-center">
+                                <MudSwitch T="bool" @bind-Value="_activa" Label="Credencial activa" Color="Color.Primary" />
+                            </MudItem>
+                        }
+                        <MudItem xs="12">
+                            <MudTextField T="string"
+                                          @bind-Value="_notas"
+                                          Label="Notas"
+                                          Placeholder="Escribe aquí notas adicionales..."
+                                          MaxLength="2000"
+                                          Lines="3"
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense" />
+                        </MudItem>
+                    </MudGrid>
+                </MudForm>
+            }
+            else if (_mode == ViewMode.Details)
             {
-                <MudPaper Class="pa-4 mt-4" Outlined="true">
-                    <MudText Typo="Typo.subtitle1" Class="mb-3">
-                        @(_editingCredencial == null ? "Nueva credencial" : "Editar credencial")
-                    </MudText>
-                    <MudForm @ref="_form" @bind-IsValid="_formValid">
+                @* MODO DETALLES *@
+                @if (_credencialDetalle != null)
+                {
+                    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
                         <MudGrid>
                             <MudItem xs="12" sm="6">
-                                <MudTextField T="string"
-                                              @bind-Value="_nombre"
-                                              Label="Nombre *"
-                                              Required="true"
-                                              RequiredError="El nombre es obligatorio"
-                                              MaxLength="100"
-                                              Variant="Variant.Outlined"
-                                              Margin="Margin.Dense" />
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Nombre</MudText>
+                                <MudText Typo="Typo.body1">@_credencialDetalle.Nombre</MudText>
                             </MudItem>
                             <MudItem xs="12" sm="6">
-                                <MudTextField T="string"
-                                              @bind-Value="_usuario"
-                                              Label="Usuario *"
-                                              Required="true"
-                                              RequiredError="El usuario es obligatorio"
-                                              MaxLength="500"
-                                              Variant="Variant.Outlined"
-                                              Margin="Margin.Dense" />
-                            </MudItem>
-                            <MudItem xs="12" sm="6">
-                                <MudTextField T="string"
-                                              @bind-Value="_password"
-                                              Label="@(_editingCredencial == null ? "Contraseña *" : "Nueva contraseña")"
-                                              Required="@(_editingCredencial == null)"
-                                              RequiredError="La contraseña es obligatoria"
-                                              MaxLength="1000"
-                                              InputType="@(_showPassword ? InputType.Text : InputType.Password)"
-                                              Variant="Variant.Outlined"
-                                              Margin="Margin.Dense"
-                                              Adornment="Adornment.End"
-                                              AdornmentIcon="@(_showPassword ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
-                                              OnAdornmentClick="@(() => _showPassword = !_showPassword)" />
-                            </MudItem>
-                            <MudItem xs="12" sm="6">
-                                @if (_editingCredencial != null)
-                                {
-                                    <MudSwitch T="bool" @bind-Value="_activa" Label="Credencial activa" Color="Color.Primary" />
-                                }
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Usuario</MudText>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudText Typo="Typo.body1">@_credencialDetalle.Usuario</MudText>
+                                    <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                                   Size="Size.Small"
+                                                   OnClick="@(() => CopyToClipboard(_credencialDetalle.Usuario, "Usuario copiado"))" />
+                                </MudStack>
                             </MudItem>
                             <MudItem xs="12">
-                                <MudTextField T="string"
-                                              @bind-Value="_notas"
-                                              Label="Notas"
-                                              MaxLength="2000"
-                                              Lines="2"
-                                              Variant="Variant.Outlined"
-                                              Margin="Margin.Dense" />
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Contraseña</MudText>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudText Typo="Typo.body1" Style="font-family: 'Roboto Mono', monospace; font-weight: 500;">
+                                        @(_showPasswordInDetails ? _credencialDetalle.Password : "••••••••••••")
+                                    </MudText>
+                                    <MudIconButton Icon="@(_showPasswordInDetails ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                                                   Size="Size.Small"
+                                                   OnClick="@(() => _showPasswordInDetails = !_showPasswordInDetails)" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                                   Size="Size.Small"
+                                                   OnClick="@(() => CopyToClipboard(_credencialDetalle.Password, "Contraseña copiada"))" />
+                                </MudStack>
                             </MudItem>
+                            @if (!string.IsNullOrWhiteSpace(_credencialDetalle.Notas))
+                            {
+                                <MudItem xs="12">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Notas</MudText>
+                                    <MudText Typo="Typo.body2" Style="white-space: pre-wrap;" Class="pa-2 grey lighten-4 rounded">@_credencialDetalle.Notas</MudText>
+                                </MudItem>
+                            }
+                            @if (_credencialDetalle.UltimoAcceso.HasValue)
+                            {
+                                <MudItem xs="12">
+                                    <MudDivider Class="my-2" />
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        Último acceso a la contraseña: <MudText Inline="true" Typo="Typo.caption" Color="Color.Default">@_credencialDetalle.UltimoAcceso.Value.ToString("dd/MM/yyyy HH:mm")</MudText>
+                                    </MudText>
+                                </MudItem>
+                            }
                         </MudGrid>
-                        <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-3">
-                            <MudButton OnClick="CloseFormDialog" Variant="Variant.Text">Cancelar</MudButton>
-                            <MudButton Variant="Variant.Filled"
-                                       Color="Color.Primary"
-                                       Disabled="@(!_formValid || _saving)"
-                                       OnClick="SaveCredencialAsync">
-                                @if (_saving)
-                                {
-                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                                }
-                                Guardar
-                            </MudButton>
-                        </MudStack>
-                    </MudForm>
-                </MudPaper>
+                    </MudPaper>
+                }
+                else
+                {
+                    <MudProgressCircular Indeterminate="true" />
+                }
             }
         }
     </DialogContent>
     <DialogActions>
-        @if (!_showForm)
+        @if (_mode == ViewMode.List)
         {
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
                        StartIcon="@Icons.Material.Filled.Add"
-                       OnClick="@(() => OpenFormDialog())">
+                       OnClick="@(() => OpenForm())">
                 Nueva credencial
             </MudButton>
+            <MudButton OnClick="Cancel">Cerrar</MudButton>
         }
-        <MudButton OnClick="Cancel">Cerrar</MudButton>
-    </DialogActions>
-</MudDialog>
-
-@* Dialog para mostrar contraseña *@
-<MudDialog @bind-Visible="_showPasswordDialog">
-    <TitleContent>
-        <MudText Typo="Typo.h6">Detalles de credencial</MudText>
-    </TitleContent>
-    <DialogContent>
-        @if (_credencialDetalle != null)
+        else if (_mode == ViewMode.Form)
         {
-            <MudGrid>
-                <MudItem xs="12">
-                    <MudText Typo="Typo.caption">Nombre</MudText>
-                    <MudText Typo="Typo.body1">@_credencialDetalle.Nombre</MudText>
-                </MudItem>
-                <MudItem xs="12">
-                    <MudText Typo="Typo.caption">Usuario</MudText>
-                    <MudStack Row="true" AlignItems="AlignItems.Center">
-                        <MudText Typo="Typo.body1">@_credencialDetalle.Usuario</MudText>
-                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
-                                       Size="Size.Small"
-                                       OnClick="@(() => CopyToClipboard(_credencialDetalle.Usuario, "Usuario copiado"))" />
-                    </MudStack>
-                </MudItem>
-                <MudItem xs="12">
-                    <MudText Typo="Typo.caption">Contraseña</MudText>
-                    <MudStack Row="true" AlignItems="AlignItems.Center">
-                        <MudText Typo="Typo.body1" Style="font-family: monospace;">
-                            @(_showPasswordInDialog ? _credencialDetalle.Password : new string('*', 12))
-                        </MudText>
-                        <MudIconButton Icon="@(_showPasswordInDialog ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
-                                       Size="Size.Small"
-                                       OnClick="@(() => _showPasswordInDialog = !_showPasswordInDialog)" />
-                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
-                                       Size="Size.Small"
-                                       OnClick="@(() => CopyToClipboard(_credencialDetalle.Password, "Contraseña copiada"))" />
-                    </MudStack>
-                </MudItem>
-                @if (!string.IsNullOrWhiteSpace(_credencialDetalle.Notas))
+            <MudButton OnClick="GoBack" Variant="Variant.Text">Cancelar</MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Disabled="@(!_formValid || _saving)"
+                       OnClick="SaveCredencialAsync">
+                @if (_saving)
                 {
-                    <MudItem xs="12">
-                        <MudText Typo="Typo.caption">Notas</MudText>
-                        <MudText Typo="Typo.body2" Style="white-space: pre-wrap;">@_credencialDetalle.Notas</MudText>
-                    </MudItem>
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
                 }
-                @if (_credencialDetalle.UltimoAcceso.HasValue)
-                {
-                    <MudItem xs="12">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            Ultimo acceso: @_credencialDetalle.UltimoAcceso.Value.ToString("dd/MM/yyyy HH:mm")
-                        </MudText>
-                    </MudItem>
-                }
-            </MudGrid>
+                Guardar
+            </MudButton>
         }
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="@(() => { _showPasswordDialog = false; _showPasswordInDialog = false; })">Cerrar</MudButton>
+        else if (_mode == ViewMode.Details)
+        {
+            <MudButton OnClick="GoBack" Variant="Variant.Filled" Color="Color.Default">Volver</MudButton>
+            <MudButton OnClick="Cancel">Cerrar</MudButton>
+        }
     </DialogActions>
 </MudDialog>
 
@@ -241,17 +271,22 @@
     [Parameter] public Guid EnlaceId { get; set; }
     [Parameter] public string EnlaceTitulo { get; set; } = string.Empty;
     [Parameter] public string EnlaceUrl { get; set; } = string.Empty;
+    [Parameter] public List<EnlaceProyectoDto>? EnlacesDisponibles { get; set; }
+    [Parameter] public Guid? InitialCredencialId { get; set; }
+    [Parameter] public bool StartInFormMode { get; set; }
 
     [Inject] private ICredencialProyectoService CredencialService { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private IDialogService DialogService { get; set; } = default!;
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
+    private enum ViewMode { List, Form, Details }
+    private ViewMode _mode = ViewMode.List;
+
     private bool _loading = true;
     private List<CredencialProyectoDto> _credenciales = new();
 
     // Form
-    private bool _showForm;
     private MudForm? _form;
     private bool _formValid;
     private bool _saving;
@@ -263,14 +298,25 @@
     private bool _activa = true;
     private bool _showPassword;
 
-    // Password dialog
-    private bool _showPasswordDialog;
-    private bool _showPasswordInDialog;
+    // Details Mode
+    private bool _showPasswordInDetails;
     private CredencialProyectoConPasswordDto? _credencialDetalle;
+    
+    // Dynamic URL based on selected enlace
+    private string _currentEnlaceUrl => EnlacesDisponibles?.FirstOrDefault(e => e.Id == EnlaceId)?.Url ?? EnlaceUrl;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadCredencialesAsync();
+        
+        if (InitialCredencialId.HasValue)
+        {
+            await ShowDetailsAsync(InitialCredencialId.Value);
+        }
+        else if (StartInFormMode)
+        {
+            OpenForm();
+        }
     }
 
     private async Task LoadCredencialesAsync()
@@ -291,14 +337,14 @@
         }
     }
 
-    private void OpenFormDialog(CredencialProyectoDto? credencial = null)
+    private void OpenForm(CredencialProyectoDto? credencial = null)
     {
         _editingCredencial = credencial;
         if (credencial != null)
         {
             _nombre = credencial.Nombre;
             _usuario = credencial.Usuario;
-            _password = string.Empty; // No mostramos la contraseña actual
+            _password = string.Empty; 
             _notas = credencial.Notas;
             _activa = credencial.Activa;
         }
@@ -311,12 +357,39 @@
             _activa = true;
         }
         _showPassword = false;
-        _showForm = true;
+        _mode = ViewMode.Form;
     }
 
-    private void CloseFormDialog()
+    private async Task ShowDetailsAsync(Guid id)
     {
-        _showForm = false;
+        _loading = true;
+        _mode = ViewMode.Details;
+        _showPasswordInDetails = false;
+        try
+        {
+            _credencialDetalle = await CredencialService.GetByIdWithPasswordAsync(id, "sistema");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al obtener detalles: {ex.Message}", Severity.Error);
+            _mode = ViewMode.List;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        // Si se abrió directamente en formulario, cancelar cierra el diálogo
+        if (StartInFormMode && _mode == ViewMode.Form)
+        {
+            Cancel();
+            return;
+        }
+        
+        _mode = ViewMode.List;
         _editingCredencial = null;
     }
 
@@ -339,7 +412,7 @@
                     Usuario: _usuario,
                     Password: _password,
                     Notas: _notas);
-                await CredencialService.CreateAsync(dto, "usuario");
+                await CredencialService.CreateAsync(dto, "sistema");
                 Snackbar.Add("Credencial creada correctamente", Severity.Success);
             }
             else
@@ -350,11 +423,11 @@
                     Password: string.IsNullOrEmpty(_password) ? null : _password,
                     Notas: _notas,
                     Activa: _activa);
-                await CredencialService.UpdateAsync(_editingCredencial.Id, dto, "usuario");
+                await CredencialService.UpdateAsync(_editingCredencial.Id, dto, "sistema");
                 Snackbar.Add("Credencial actualizada correctamente", Severity.Success);
             }
 
-            CloseFormDialog();
+            _mode = ViewMode.List;
             await LoadCredencialesAsync();
         }
         catch (Exception ex)
@@ -370,8 +443,8 @@
     private async Task DeleteCredencialAsync(Guid id)
     {
         var result = await DialogService.ShowMessageBox(
-            "Confirmar eliminacion",
-            "¿Esta seguro de que desea eliminar esta credencial? Esta accion no se puede deshacer.",
+            "Confirmar eliminación",
+            "¿Está seguro de que desea eliminar esta credencial? Esta acción no se puede deshacer.",
             yesText: "Eliminar",
             cancelText: "Cancelar");
 
@@ -394,26 +467,12 @@
     {
         try
         {
-            var password = await CredencialService.GetPasswordAsync(id, "usuario");
+            var password = await CredencialService.GetPasswordAsync(id, "sistema");
             await CopyToClipboard(password, "Contraseña copiada al portapapeles");
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error al copiar: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private async Task ShowPasswordAsync(Guid id)
-    {
-        try
-        {
-            _credencialDetalle = await CredencialService.GetByIdWithPasswordAsync(id, "usuario");
-            _showPasswordInDialog = false;
-            _showPasswordDialog = true;
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error al obtener detalles: {ex.Message}", Severity.Error);
         }
     }
 

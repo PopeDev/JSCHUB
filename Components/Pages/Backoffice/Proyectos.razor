@@ -129,24 +129,24 @@
                                    Size="Size.Small"
                                    Color="Color.Tertiary"
                                    Href="@($"/backoffice/proyectos/{context.Id}/pizarra")"
-                                   Title="Pizarra" />
+                                   title="Pizarra" />
                     <MudIconButton Icon="@Icons.Material.Filled.Visibility"
                                    Size="Size.Small"
                                    Color="Color.Info"
                                    Href="@($"/backoffice/proyectos/{context.Id}")"
-                                   Title="Ver detalle" />
+                                   title="Ver detalle" />
                     <MudIconButton Icon="@Icons.Material.Filled.Edit"
                                    Size="Size.Small"
                                    Color="Color.Warning"
                                    Href="@($"/backoffice/proyectos/{context.Id}/edit")"
-                                   Title="Editar" />
+                                   title="Editar" />
                     @if (context.Estado == EstadoProyecto.Archivado)
                     {
                         <MudIconButton Icon="@Icons.Material.Filled.Restore"
                                        Size="Size.Small"
                                        Color="Color.Success"
                                        OnClick="@(() => ReactivarAsync(context.Id))"
-                                       Title="Reactivar" />
+                                       title="Reactivar" />
                     }
                     else
                     {
@@ -154,7 +154,7 @@
                                        Size="Size.Small"
                                        Color="Color.Error"
                                        OnClick="@(() => ArchivarAsync(context.Id))"
-                                       Title="Archivar" />
+                                       title="Archivar" />
                     }
                 </MudStack>
             </MudTd>

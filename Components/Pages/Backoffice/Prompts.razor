@@ -114,24 +114,24 @@
                 <MudTd>
                     <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Visibility"
                                    Href="@($"/backoffice/prompts/{context.Id}")"
-                                   Title="Ver detalle" />
+                                   title="Ver detalle" />
                     <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit"
                                    Href="@($"/backoffice/prompts/{context.Id}/edit")"
-                                   Title="Editar" />
+                                   title="Editar" />
                     @if (context.Activo)
                     {
                         <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.VisibilityOff"
-                                       Color="Color.Warning" Title="Desactivar"
+                                       Color="Color.Warning" title="Desactivar"
                                        OnClick="@(() => ToggleActivoAsync(context.Id))" />
                     }
                     else
                     {
                         <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Visibility"
-                                       Color="Color.Success" Title="Activar"
+                                       Color="Color.Success" title="Activar"
                                        OnClick="@(() => ToggleActivoAsync(context.Id))" />
                     }
                     <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Delete"
-                                   Color="Color.Error" Title="Eliminar"
+                                   Color="Color.Error" title="Eliminar"
                                    OnClick="@(() => ConfirmDeleteAsync(context))" />
                 </MudTd>
             </RowTemplate>

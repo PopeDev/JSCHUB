@@ -51,11 +51,11 @@
             </MudItem>
             <MudItem xs="6" sm="2">
                 <MudDatePicker @bind-Date="_filterFechaDesde" Label="Desde"
-                               Variant="Variant.Outlined" Dense="true" Clearable="true" />
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" />
             </MudItem>
             <MudItem xs="6" sm="2">
                 <MudDatePicker @bind-Date="_filterFechaHasta" Label="Hasta"
-                               Variant="Variant.Outlined" Dense="true" Clearable="true" />
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" />
             </MudItem>
             <MudItem xs="6" sm="1">
                 <MudSelect T="EstadoGasto?" @bind-Value="_filterEstado" Label="Estado" Clearable="true"
@@ -148,17 +148,17 @@
                 </MudTd>
                 <MudTd>
                     <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Visibility"
-                                   Href="@($"/backoffice/gastos/{context.Id}")" Title="Ver detalle" />
+                                   Href="@($"/backoffice/gastos/{context.Id}")" title="Ver detalle" />
                     <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Edit"
-                                   Href="@($"/backoffice/gastos/{context.Id}/edit")" Title="Editar" />
+                                   Href="@($"/backoffice/gastos/{context.Id}/edit")" title="Editar" />
                     @if (context.Estado != EstadoGasto.Anulado)
                     {
                         <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Cancel"
-                                       Color="Color.Warning" Title="Anular"
+                                       Color="Color.Warning" title="Anular"
                                        OnClick="@(() => ConfirmAnularAsync(context))" />
                     }
                     <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Delete"
-                                   Color="Color.Error" Title="Eliminar"
+                                   Color="Color.Error" title="Eliminar"
                                    OnClick="@(() => ConfirmDeleteAsync(context))" />
                 </MudTd>
             </RowTemplate>
